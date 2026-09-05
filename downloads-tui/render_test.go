@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -25,19 +26,52 @@ func TestFormatBytes(t *testing.T) {
 	}
 }
 
-func TestBarPlainMonotonicAndWidth(t *testing.T) {
+func TestSparklineWidthAndActivity(t *testing.T) {
 	const width = 10
-	prev := -1
-	for pct := 0.0; pct <= 100; pct += 12.5 {
-		s := barPlain(pct, width)
-		if lipgloss.Width(s) != width {
-			t.Fatalf("barPlain(%.1f, %d) width %d, want %d (%q)", pct, width, lipgloss.Width(s), width, s)
+	empty := sparkline(nil, width)
+	if lipgloss.Width(empty) != width {
+		t.Fatalf("empty sparkline width %d, want %d (%q)", lipgloss.Width(empty), width, empty)
+	}
+	for _, r := range empty {
+		if r != sparkBars[0] {
+			t.Fatalf("empty sparkline should be all floor glyphs, got %q", empty)
 		}
-		filled := strings.Count(s, "█")
-		if filled < prev {
-			t.Fatalf("barPlain filled cells decreased at %.1f%%: %q", pct, s)
-		}
-		prev = filled
+	}
+	s := sparkline([]float64{1, 2, 4, 8, 4, 2}, width)
+	if lipgloss.Width(s) != width {
+		t.Fatalf("sparkline width %d, want %d (%q)", lipgloss.Width(s), width, s)
+	}
+	if !strings.ContainsRune(s, sparkBars[len(sparkBars)-1]) {
+		t.Fatalf("peak rate should reach max glyph, got %q", s)
+	}
+}
+
+func TestRecordHistoryOnlyOnAdvance(t *testing.T) {
+	m := model{}
+	d := Download{ID: 1, ReceivedBytes: 100, State: StateInProgress}
+	m.recordHistory([]Download{d})
+	if len(m.ratesFor(1)) != 0 {
+		t.Fatalf("baseline sample should not invent a rate, got %v", m.ratesFor(1))
+	}
+	d.ReceivedBytes = 100
+	m.recordHistory([]Download{d})
+	if len(m.ratesFor(1)) != 0 {
+		t.Fatalf("unchanged received_bytes must not append, got %v", m.ratesFor(1))
+	}
+	time.Sleep(10 * time.Millisecond)
+	d.ReceivedBytes = 1100
+	m.recordHistory([]Download{d})
+	rates := m.ratesFor(1)
+	if len(rates) != 1 {
+		t.Fatalf("expected one rate after advance, got %v", rates)
+	}
+	if rates[0] <= 0 {
+		t.Fatalf("rate should be positive, got %v", rates[0])
+	}
+	// Finished / missing ids are pruned.
+	m.recordHistory([]Download{{ID: 1, ReceivedBytes: 1100, State: StateCompleted}})
+	if m.ratesFor(1) != nil {
+		t.Fatalf("completed download should drop history")
 	}
 }
 
@@ -74,7 +108,8 @@ func TestRenderRowKeepsSelectionFullWidth(t *testing.T) {
 		State:         StateInProgress,
 	}
 	const inner = 72
-	row := renderRow(d, true, inner, p)
+	rates := []float64{1e6, 2e6, 1.5e6, 3e6, 2e6}
+	row := renderRow(d, true, inner, p, rates)
 	if lipgloss.Width(row) != inner {
 		t.Fatalf("selected row width %d, want %d", lipgloss.Width(row), inner)
 	}

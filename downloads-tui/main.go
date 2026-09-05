@@ -90,43 +90,6 @@ func stateLabel(s State) string {
 	}
 }
 
-// Eighth-block partial fill -- denser than plain █/░, closer to btop's
-// braille meters without needing a full graph history.
-var barEighths = []string{"", "▏", "▎", "▍", "▌", "▋", "▊", "▉"}
-
-func barPlain(pct float64, width int) string {
-	if width <= 0 {
-		return ""
-	}
-	if pct < 0 {
-		pct = 0
-	}
-	if pct > 100 {
-		pct = 100
-	}
-	filled := pct / 100.0 * float64(width)
-	full := int(filled)
-	frac := int((filled - float64(full)) * 8)
-	if full > width {
-		full = width
-		frac = 0
-	}
-	var b strings.Builder
-	b.WriteString(strings.Repeat("█", full))
-	if full < width {
-		partial := barEighths[frac]
-		if partial == "" {
-			partial = "░"
-			b.WriteString(partial)
-			b.WriteString(strings.Repeat("░", width-full-1))
-		} else {
-			b.WriteString(partial)
-			b.WriteString(strings.Repeat("░", width-full-1))
-		}
-	}
-	return b.String()
-}
-
 func formatBytes(n int64) string {
 	if n < 0 {
 		n = 0
@@ -163,18 +126,19 @@ func truncate(s string, width int) string {
 	return string(runes) + "…"
 }
 
-// Right-hand column: progress meter + sizes for active rows, size + status
-// label for finished ones. Plain (no ANSI) so width math stays honest.
-func rightPlain(d Download, barWidth int) string {
+// Right-hand column: throughput sparkline + sizes for active rows, size +
+// status label for finished ones. Plain (no ANSI) so width math stays honest.
+func rightPlain(d Download, sparkWidth int, rates []float64) string {
 	switch d.State {
 	case StateInProgress:
+		spark := sparkline(rates, sparkWidth)
 		if d.TotalBytes <= 0 {
 			// Streamed/chunked -- no Content-Length yet. Show received only.
-			return fmt.Sprintf("%s  %s", strings.Repeat("─", barWidth), formatBytes(d.ReceivedBytes))
+			return fmt.Sprintf("%s  %s", spark, formatBytes(d.ReceivedBytes))
 		}
 		pct := progressPct(d)
 		return fmt.Sprintf("%s %3d%%  %s/%s",
-			barPlain(pct, barWidth),
+			spark,
 			int(pct+0.5),
 			formatBytes(d.ReceivedBytes),
 			formatBytes(d.TotalBytes))
@@ -189,7 +153,7 @@ func rightPlain(d Download, barWidth int) string {
 	}
 }
 
-func barWidthFor(innerWidth int) int {
+func sparkWidthFor(innerWidth int) int {
 	// Keep the meter readable without crowding out the filename on narrow
 	// terminals; grow a little when there's room.
 	switch {
@@ -261,6 +225,9 @@ type model struct {
 	popupSelected int
 	scroll        int
 
+	// Throughput sparklines for in-progress rows -- see spark.go.
+	hist map[int64]*histState
+
 	width, height int
 	quitting      bool
 }
@@ -299,7 +266,7 @@ func initialModel() model {
 	if len(d) > 0 {
 		selectedID = d[0].ID
 	}
-	return model{
+	m := model{
 		dbPath:     path,
 		palette:    loadPalette(),
 		downloads:  d,
@@ -307,6 +274,8 @@ func initialModel() model {
 		popupID:    noID,
 		focus:      focusList,
 	}
+	m.recordHistory(d)
+	return m
 }
 
 func (m model) Init() tea.Cmd {
@@ -366,6 +335,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.downloads = msg.downloads
+		m.recordHistory(m.downloads)
 		// Pick up Omarchy theme switches without restarting the window.
 		m.palette = loadPalette()
 		if _, ok := downloadByID(m.downloads, m.selectedID); !ok {
@@ -571,12 +541,12 @@ func frameTitle(ds []Download) string {
 // an unstyled string padded to full width -- wrapping already-colored ANSI
 // in an outer style only highlights the first segment (each inner
 // Foreground().Render() resets SGR). Unselected rows keep per-segment color.
-func renderRow(d Download, selected bool, innerWidth int, p Palette) string {
+func renderRow(d Download, selected bool, innerWidth int, p Palette, rates []float64) string {
 	glyph, color := stateGlyphAndColor(d.State, p)
-	bw := barWidthFor(innerWidth)
-	right := rightPlain(d, bw)
+	sw := sparkWidthFor(innerWidth)
+	right := rightPlain(d, sw, rates)
 
-	// "● name ……  ████ 45%  12MB/90MB" -- glyph + spaces + name + gap + right
+	// "● name ……  ▃▅▇▅▂  45%  12MB/90MB" -- glyph + name + gap + right
 	prefix := glyph + " "
 	gap := "  "
 	nameWidth := innerWidth - lipgloss.Width(prefix) - lipgloss.Width(gap) - lipgloss.Width(right)
@@ -612,38 +582,35 @@ func renderRow(d Download, selected bool, innerWidth int, p Palette) string {
 	b.WriteString(strings.Repeat(" ", namePad))
 	b.WriteString(gap)
 	if d.State == StateInProgress {
-		b.WriteString(styleProgressRight(d, bw, p))
+		b.WriteString(styleProgressRight(d, sw, rates, p))
 	} else {
 		b.WriteString(lipgloss.NewStyle().Foreground(color).Render(right))
 	}
 	return b.String()
 }
 
-func styleProgressRight(d Download, barWidth int, p Palette) string {
+func styleProgressRight(d Download, sparkWidth int, rates []float64, p Palette) string {
 	muted := lipgloss.NewStyle().Foreground(p.Muted)
 	accent := lipgloss.NewStyle().Foreground(p.Accent)
+	spark := sparkline(rates, sparkWidth)
+	// Color non-floor glyphs accent; floor (▁ / no data yet) stays muted so
+	// an empty trail doesn't shout.
+	var sparkStyled strings.Builder
+	floor := sparkBars[0]
+	for _, r := range spark {
+		ch := string(r)
+		if r == floor {
+			sparkStyled.WriteString(muted.Render(ch))
+		} else {
+			sparkStyled.WriteString(accent.Render(ch))
+		}
+	}
 	if d.TotalBytes <= 0 {
-		return accent.Render(strings.Repeat("─", barWidth)) + muted.Render("  "+formatBytes(d.ReceivedBytes))
+		return sparkStyled.String() + muted.Render("  "+formatBytes(d.ReceivedBytes))
 	}
 	pct := progressPct(d)
-	plain := barPlain(pct, barWidth)
-	// Color filled cells accent, empty muted -- walk the plain bar so
-	// partial eighth-blocks stay accent too (they're "filled").
-	var barStyled strings.Builder
-	empty := false
-	for _, r := range plain {
-		ch := string(r)
-		if ch == "░" {
-			empty = true
-		}
-		if empty {
-			barStyled.WriteString(muted.Render(ch))
-		} else {
-			barStyled.WriteString(accent.Render(ch))
-		}
-	}
 	meta := fmt.Sprintf(" %3d%%  %s/%s", int(pct+0.5), formatBytes(d.ReceivedBytes), formatBytes(d.TotalBytes))
-	return barStyled.String() + muted.Render(meta)
+	return sparkStyled.String() + muted.Render(meta)
 }
 
 func emptyStateLines(innerWidth, contentHeight int, p Palette) []string {
@@ -692,7 +659,8 @@ func (m model) View() string {
 			end = len(m.downloads)
 		}
 		for i := start; i < end; i++ {
-			bodyLines = append(bodyLines, renderRow(m.downloads[i], i == selectedIdx, innerWidth, p))
+			d := m.downloads[i]
+			bodyLines = append(bodyLines, renderRow(d, i == selectedIdx, innerWidth, p, m.ratesFor(d.ID)))
 		}
 	}
 
