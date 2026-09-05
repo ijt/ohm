@@ -11,6 +11,23 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// A fresh connection every poll (see openDB's callers) landing on
+// SQLITE_BUSY -- the daemon holds a brief write lock while persisting a
+// progress update -- used to come back as a plain error, which loadAll
+// treated as "zero rows" and reload() then discarded entirely (see
+// main.go), flashing "No downloads yet." over a real, populated list.
+// DownloadManager.cpp now opens the file in WAL mode, which mostly
+// avoids this (a WAL reader isn't blocked by a writer at all), but this
+// busy_timeout is real defense in depth, not just belt-and-suspenders --
+// modernc.org/sqlite's own busy_timeout still applies to WAL's brief
+// writer-vs-writer/checkpoint locks, and this is a single-file constant
+// so there's no real cost to keeping it.
+const dsnSuffix = "?_busy_timeout=2000"
+
+func openDB(path string) (*sql.DB, error) {
+	return sql.Open("sqlite", path+dsnSuffix)
+}
+
 // Mirrors DownloadManager::State's declaration order in
 // app/src/DownloadManager.h exactly -- see the comment on that enum for why
 // these ordinals must stay in sync by hand across every language reading
@@ -52,7 +69,7 @@ func clearFinished(path string) error {
 	if _, err := os.Stat(path); err != nil {
 		return nil
 	}
-	db, err := sql.Open("sqlite", path)
+	db, err := openDB(path)
 	if err != nil {
 		return err
 	}
@@ -65,7 +82,7 @@ func loadAll(path string) ([]Download, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, nil
 	}
-	db, err := sql.Open("sqlite", path)
+	db, err := openDB(path)
 	if err != nil {
 		return nil, err
 	}

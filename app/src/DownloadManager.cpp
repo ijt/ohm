@@ -83,6 +83,19 @@ bool DownloadManager::open() {
     return false;
   }
   QSqlQuery q(db_);
+  // WAL instead of the default rollback-journal mode: shinto-downloads
+  // (downloads-tui/, a separate process) opens a fresh read connection to
+  // this same file roughly twice a second. Under the default mode, a
+  // writer holds an exclusive lock for the (brief) duration of each
+  // write, and a reader that lands in that window gets SQLITE_BUSY
+  // immediately -- confirmed as the cause of a real "flickers between
+  // the list and 'No downloads yet'" bug, since the TUI's own read path
+  // silently treated that error as "zero rows" (see its db.go). WAL lets
+  // readers proceed against the last-committed snapshot instead of
+  // blocking on an in-progress writer, which is exactly the read/write
+  // mix here (this process is the only writer; downloads-tui is a
+  // read-mostly, occasional-write-via-socket-not-SQL guest).
+  q.exec(QStringLiteral("PRAGMA journal_mode=WAL"));
   q.exec(QStringLiteral(
       "CREATE TABLE IF NOT EXISTS downloads ("
       " id INTEGER PRIMARY KEY, filename TEXT, path TEXT, url TEXT,"

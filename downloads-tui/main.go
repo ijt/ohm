@@ -151,7 +151,16 @@ type model struct {
 }
 
 type tickMsg time.Time
-type reloadedMsg struct{ downloads []Download }
+
+// ok is false on a transient read error -- most likely SQLITE_BUSY from
+// landing a poll right as the daemon commits a write (see db.go's openDB
+// comment). downloads is nil in that case and must NOT be treated as "an
+// empty list": that previously flashed the "No downloads yet." message
+// over a real, populated list every time a poll raced a write.
+type reloadedMsg struct {
+	downloads []Download
+	ok        bool
+}
 
 func tick() tea.Cmd {
 	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg { return tickMsg(t) })
@@ -159,8 +168,8 @@ func tick() tea.Cmd {
 
 func reload(path string) tea.Cmd {
 	return func() tea.Msg {
-		d, _ := loadAll(path)
-		return reloadedMsg{downloads: d}
+		d, err := loadAll(path)
+		return reloadedMsg{downloads: d, ok: err == nil}
 	}
 }
 
@@ -206,6 +215,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(reload(m.dbPath), tick())
 
 	case reloadedMsg:
+		if !msg.ok {
+			// Keep showing the last-known-good list -- see reloadedMsg's
+			// own doc comment. Nothing below needs to run either: the
+			// selection/popup targets are still valid against the list
+			// we're keeping, since it hasn't changed.
+			return m, nil
+		}
 		m.downloads = msg.downloads
 		if _, ok := downloadByID(m.downloads, m.selectedID); !ok {
 			m.selectedID = noID
