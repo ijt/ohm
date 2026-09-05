@@ -413,7 +413,22 @@ func (m model) View() string {
 
 	var bodyLines []string
 	if len(m.downloads) == 0 {
-		bodyLines = []string{"No downloads yet."}
+		// Centered both ways, dim -- an empty state, not a row, so it
+		// shouldn't compete with an actual download list for attention.
+		// box() already pads any content shorter than contentHeight with
+		// blank lines, so only the lines *above* the message need to be
+		// built here to push it down to the vertical middle.
+		contentHeight := maxInt(height, 3) - 2
+		topPad := maxInt((contentHeight-1)/2, 0)
+		bodyLines = make([]string, 0, topPad+1)
+		for i := 0; i < topPad; i++ {
+			bodyLines = append(bodyLines, "")
+		}
+		bodyLines = append(bodyLines, lipgloss.NewStyle().
+			Foreground(p.Muted).
+			Width(innerWidth).
+			Align(lipgloss.Center).
+			Render("No downloads yet."))
 	} else {
 		for i, d := range m.downloads {
 			glyph, color := stateGlyphAndColor(d.State, p)
