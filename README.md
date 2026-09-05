@@ -36,12 +36,12 @@ git clone https://github.com/ijt/shinto.git
 cd shinto
 cmake -S app -B app/build
 cmake --build app/build
-cd downloads-tui && cargo build --release && cd ..
+cd downloads-tui && go build -o shinto-downloads . && cd ..
 ./shinto install
 ```
 
-The `cargo build` is for the downloads view (`shinto-downloads`, a separate
-Rust/Ratatui binary -- see [`downloads-tui/`](downloads-tui/)) opened by
+The `go build` is for the downloads view (`shinto-downloads`, a separate
+Go/Bubble Tea binary -- see [`downloads-tui/`](downloads-tui/)) opened by
 Ctrl+J or clicking the bottom progress bar; skip it and Shinto still works
 fine as a browser, that one view just won't open. `./shinto install` will:
 
@@ -83,7 +83,7 @@ omarchy default browser shinto
 /usr/lib/systemd/user/shinto.service
 ```
 
-`shinto-downloads` isn't part of this -- it's a separate Cargo build (see
+`shinto-downloads` isn't part of this -- it's a separate Go build (see
 [`downloads-tui/`](downloads-tui/)), not yet wired into `cmake --install`
 or the AUR `PKGBUILD`. `./shinto install` handles it for a from-source
 install (see above); packaging it properly is still open work.

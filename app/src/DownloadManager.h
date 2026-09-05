@@ -23,7 +23,7 @@ class DownloadManager : public QObject {
 
  public:
   // Persisted to SQLite as this declaration order's plain int (see
-  // persist()/open()) -- downloads-tui/ (a separate Rust binary reading
+  // persist()/open()) -- downloads-tui/ (a separate Go binary reading
   // the same downloads.sqlite directly, no shared header) mirrors these
   // exact ordinals in its own enum. Reordering/inserting a variant here
   // silently breaks that reader; append new states at the end only.
