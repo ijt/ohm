@@ -18,10 +18,12 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/muesli/termenv"
 )
 
 type action int
@@ -42,37 +44,36 @@ func actionsFor(s State) []actionItem {
 	switch s {
 	case StateInProgress:
 		return []actionItem{
-			{"📁 Open containing folder", actionOpenFolder},
-			{"🗑 Cancel download", actionCancelDownload},
-			{"✕ Close", actionClose},
+			{"Open containing folder", actionOpenFolder},
+			{"Cancel download", actionCancelDownload},
+			{"Close", actionClose},
 		}
 	case StateCompleted:
 		return []actionItem{
-			{"📄 Open file", actionOpenFile},
-			{"📁 Open containing folder", actionOpenFolder},
-			{"✕ Close", actionClose},
+			{"Open file", actionOpenFile},
+			{"Open containing folder", actionOpenFolder},
+			{"Close", actionClose},
 		}
 	default: // Interrupted, Cancelled
 		return []actionItem{
-			{"📁 Open containing folder", actionOpenFolder},
-			{"✕ Close", actionClose},
+			{"Open containing folder", actionOpenFolder},
+			{"Close", actionClose},
 		}
 	}
 }
 
-// The glyph is a leading status marker for finished/failed/cancelled rows
-// (✓/✗/-) -- an in-progress row has no glyph, just its own progress bar,
-// which already says "in progress" better than an arrow would.
+// Leading status marker for finished/failed/cancelled rows. In-progress
+// rows use a live progress bar instead of a glyph.
 func stateGlyphAndColor(s State, p Palette) (string, lipgloss.Color) {
 	switch s {
 	case StateInProgress:
-		return "", p.Accent
+		return "●", p.Accent
 	case StateCompleted:
-		return "✓", lipgloss.Color("#4caf50")
+		return "✓", p.Success
 	case StateInterrupted:
-		return "✗", lipgloss.Color("#e05252")
+		return "✗", p.Danger
 	default:
-		return "-", p.Muted
+		return "–", p.Muted
 	}
 }
 
@@ -89,15 +90,118 @@ func stateLabel(s State) string {
 	}
 }
 
-func bar(pct float64, width int) string {
-	filled := int(pct/100.0*float64(width) + 0.5)
-	if filled > width {
-		filled = width
+// Eighth-block partial fill -- denser than plain █/░, closer to btop's
+// braille meters without needing a full graph history.
+var barEighths = []string{"", "▏", "▎", "▍", "▌", "▋", "▊", "▉"}
+
+func barPlain(pct float64, width int) string {
+	if width <= 0 {
+		return ""
 	}
-	if filled < 0 {
-		filled = 0
+	if pct < 0 {
+		pct = 0
 	}
-	return strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
+	if pct > 100 {
+		pct = 100
+	}
+	filled := pct / 100.0 * float64(width)
+	full := int(filled)
+	frac := int((filled - float64(full)) * 8)
+	if full > width {
+		full = width
+		frac = 0
+	}
+	var b strings.Builder
+	b.WriteString(strings.Repeat("█", full))
+	if full < width {
+		partial := barEighths[frac]
+		if partial == "" {
+			partial = "░"
+			b.WriteString(partial)
+			b.WriteString(strings.Repeat("░", width-full-1))
+		} else {
+			b.WriteString(partial)
+			b.WriteString(strings.Repeat("░", width-full-1))
+		}
+	}
+	return b.String()
+}
+
+func formatBytes(n int64) string {
+	if n < 0 {
+		n = 0
+	}
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for v := n / unit; v >= unit; v /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "KMGTPE"[exp])
+}
+
+func truncate(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if lipgloss.Width(s) <= width {
+		return s
+	}
+	if width == 1 {
+		return "…"
+	}
+	runes := []rune(s)
+	for len(runes) > 0 && lipgloss.Width(string(runes)+"…") > width {
+		runes = runes[:len(runes)-1]
+	}
+	if len(runes) == 0 {
+		return "…"
+	}
+	return string(runes) + "…"
+}
+
+// Right-hand column: progress meter + sizes for active rows, size + status
+// label for finished ones. Plain (no ANSI) so width math stays honest.
+func rightPlain(d Download, barWidth int) string {
+	switch d.State {
+	case StateInProgress:
+		if d.TotalBytes <= 0 {
+			// Streamed/chunked -- no Content-Length yet. Show received only.
+			return fmt.Sprintf("%s  %s", strings.Repeat("─", barWidth), formatBytes(d.ReceivedBytes))
+		}
+		pct := progressPct(d)
+		return fmt.Sprintf("%s %3d%%  %s/%s",
+			barPlain(pct, barWidth),
+			int(pct+0.5),
+			formatBytes(d.ReceivedBytes),
+			formatBytes(d.TotalBytes))
+	default:
+		size := ""
+		if d.TotalBytes > 0 {
+			size = formatBytes(d.TotalBytes) + "  "
+		} else if d.ReceivedBytes > 0 {
+			size = formatBytes(d.ReceivedBytes) + "  "
+		}
+		return size + stateLabel(d.State)
+	}
+}
+
+func barWidthFor(innerWidth int) int {
+	// Keep the meter readable without crowding out the filename on narrow
+	// terminals; grow a little when there's room.
+	switch {
+	case innerWidth >= 100:
+		return 16
+	case innerWidth >= 80:
+		return 14
+	case innerWidth >= 60:
+		return 12
+	default:
+		return 8
+	}
 }
 
 type focusKind int
@@ -128,6 +232,16 @@ func downloadByID(ds []Download, id int64) (Download, bool) {
 	return ds[i], true
 }
 
+func countActive(ds []Download) int {
+	n := 0
+	for _, d := range ds {
+		if d.State == StateInProgress {
+			n++
+		}
+	}
+	return n
+}
+
 type model struct {
 	dbPath    string
 	palette   Palette
@@ -145,6 +259,7 @@ type model struct {
 	focus         focusKind
 	popupID       int64
 	popupSelected int
+	scroll        int
 
 	width, height int
 	quitting      bool
@@ -198,6 +313,33 @@ func (m model) Init() tea.Cmd {
 	return tick()
 }
 
+func (m *model) clampScroll() {
+	contentHeight := maxInt(m.height-2, 1)
+	maxScroll := maxInt(len(m.downloads)-contentHeight, 0)
+	if m.scroll > maxScroll {
+		m.scroll = maxScroll
+	}
+	if m.scroll < 0 {
+		m.scroll = 0
+	}
+	idx := indexOfID(m.downloads, m.selectedID)
+	if idx < 0 {
+		return
+	}
+	if idx < m.scroll {
+		m.scroll = idx
+	}
+	if idx >= m.scroll+contentHeight {
+		m.scroll = idx - contentHeight + 1
+	}
+	if m.scroll > maxScroll {
+		m.scroll = maxScroll
+	}
+	if m.scroll < 0 {
+		m.scroll = 0
+	}
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Ctrl+C quits from either focus -- handled ahead of the focus switch
 	// below so the popup can't swallow it.
@@ -209,6 +351,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		m.clampScroll()
 		return m, nil
 
 	case tickMsg:
@@ -223,6 +366,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.downloads = msg.downloads
+		// Pick up Omarchy theme switches without restarting the window.
+		m.palette = loadPalette()
 		if _, ok := downloadByID(m.downloads, m.selectedID); !ok {
 			m.selectedID = noID
 			if len(m.downloads) > 0 {
@@ -244,6 +389,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+		m.clampScroll()
 		return m, nil
 
 	case tea.KeyMsg:
@@ -259,10 +405,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else if i < 0 && len(m.downloads) > 0 {
 					m.selectedID = m.downloads[0].ID
 				}
+				m.clampScroll()
 			case "up", "k":
 				if i := indexOfID(m.downloads, m.selectedID); i > 0 {
 					m.selectedID = m.downloads[i-1].ID
 				}
+				m.clampScroll()
 			case "enter":
 				if _, ok := downloadByID(m.downloads, m.selectedID); ok {
 					m.focus = focusPopup
@@ -372,6 +520,22 @@ func placeOverlay(x, y int, overlay, base string) string {
 // -- matching downloads-tui/src/main.rs's Block::title()/title_bottom(),
 // which is what made the Ratatui version's help text read as "attached to
 // the window frame" rather than floating in the content area.
+// padInner pads `text` to `width` cells with background-colored spaces.
+// Unlike wrapping the whole line in a lipgloss Width()/Background() style,
+// this leaves any ANSI already in `text` (selection bar, progress colors)
+// intact -- an outer Background().Render() was flattening those.
+func padInner(text string, width int, p Palette) string {
+	w := lipgloss.Width(text)
+	if w > width {
+		return ansi.Cut(text, 0, width)
+	}
+	if w == width {
+		return text
+	}
+	pad := lipgloss.NewStyle().Background(p.Bg).Render(strings.Repeat(" ", width-w))
+	return text + pad
+}
+
 func box(width, height int, title, hint string, p Palette, bodyLines []string) string {
 	width = maxInt(width, 4)
 	height = maxInt(height, 3)
@@ -379,7 +543,6 @@ func box(width, height int, title, hint string, p Palette, bodyLines []string) s
 	contentHeight := height - 2
 
 	borderStyle := lipgloss.NewStyle().Foreground(p.Accent)
-	rowStyle := lipgloss.NewStyle().Width(innerWidth).Background(p.Bg).Foreground(p.Fg)
 
 	var b strings.Builder
 	b.WriteString(borderStyle.Render("╭"+centerInLine(title, innerWidth, "─")+"╮") + "\n")
@@ -388,10 +551,114 @@ func box(width, height int, title, hint string, p Palette, bodyLines []string) s
 		if i < len(bodyLines) {
 			text = bodyLines[i]
 		}
-		b.WriteString(borderStyle.Render("│") + rowStyle.Render(text) + borderStyle.Render("│") + "\n")
+		b.WriteString(borderStyle.Render("│") + padInner(text, innerWidth, p) + borderStyle.Render("│") + "\n")
 	}
 	b.WriteString(borderStyle.Render("╰" + centerInLine(hint, innerWidth, "─") + "╯"))
 	return b.String()
+}
+
+func frameTitle(ds []Download) string {
+	if n := countActive(ds); n > 0 {
+		return fmt.Sprintf("Downloads · %d active", n)
+	}
+	if len(ds) == 0 {
+		return "Downloads"
+	}
+	return fmt.Sprintf("Downloads · %d", len(ds))
+}
+
+// renderRow builds one list row. Selected rows are a single flat style over
+// an unstyled string padded to full width -- wrapping already-colored ANSI
+// in an outer style only highlights the first segment (each inner
+// Foreground().Render() resets SGR). Unselected rows keep per-segment color.
+func renderRow(d Download, selected bool, innerWidth int, p Palette) string {
+	glyph, color := stateGlyphAndColor(d.State, p)
+	bw := barWidthFor(innerWidth)
+	right := rightPlain(d, bw)
+
+	// "● name ……  ████ 45%  12MB/90MB" -- glyph + spaces + name + gap + right
+	prefix := glyph + " "
+	gap := "  "
+	nameWidth := innerWidth - lipgloss.Width(prefix) - lipgloss.Width(gap) - lipgloss.Width(right)
+	if nameWidth < 4 {
+		// Ultra-narrow: drop the right column before crushing the name to
+		// nothing useful.
+		right = ""
+		gap = ""
+		nameWidth = innerWidth - lipgloss.Width(prefix)
+	}
+	name := truncate(d.Filename, maxInt(nameWidth, 1))
+	// Pad the name so the right column stays right-aligned across rows.
+	namePad := maxInt(nameWidth-lipgloss.Width(name), 0)
+	plain := prefix + name + strings.Repeat(" ", namePad) + gap + right
+	if lipgloss.Width(plain) > innerWidth {
+		plain = truncate(plain, innerWidth)
+	}
+
+	if selected {
+		// p.Selection (not Reverse/Accent) -- a quiet bar that still reads
+		// as "this row" against the list background, matching Omarchy's
+		// selection token used elsewhere in the desktop.
+		return lipgloss.NewStyle().
+			Background(p.Selection).
+			Foreground(p.Fg).
+			Width(innerWidth).
+			Render(plain)
+	}
+
+	var b strings.Builder
+	b.WriteString(lipgloss.NewStyle().Foreground(color).Render(prefix))
+	b.WriteString(lipgloss.NewStyle().Foreground(p.Fg).Render(name))
+	b.WriteString(strings.Repeat(" ", namePad))
+	b.WriteString(gap)
+	if d.State == StateInProgress {
+		b.WriteString(styleProgressRight(d, bw, p))
+	} else {
+		b.WriteString(lipgloss.NewStyle().Foreground(color).Render(right))
+	}
+	return b.String()
+}
+
+func styleProgressRight(d Download, barWidth int, p Palette) string {
+	muted := lipgloss.NewStyle().Foreground(p.Muted)
+	accent := lipgloss.NewStyle().Foreground(p.Accent)
+	if d.TotalBytes <= 0 {
+		return accent.Render(strings.Repeat("─", barWidth)) + muted.Render("  "+formatBytes(d.ReceivedBytes))
+	}
+	pct := progressPct(d)
+	plain := barPlain(pct, barWidth)
+	// Color filled cells accent, empty muted -- walk the plain bar so
+	// partial eighth-blocks stay accent too (they're "filled").
+	var barStyled strings.Builder
+	empty := false
+	for _, r := range plain {
+		ch := string(r)
+		if ch == "░" {
+			empty = true
+		}
+		if empty {
+			barStyled.WriteString(muted.Render(ch))
+		} else {
+			barStyled.WriteString(accent.Render(ch))
+		}
+	}
+	meta := fmt.Sprintf(" %3d%%  %s/%s", int(pct+0.5), formatBytes(d.ReceivedBytes), formatBytes(d.TotalBytes))
+	return barStyled.String() + muted.Render(meta)
+}
+
+func emptyStateLines(innerWidth, contentHeight int, p Palette) []string {
+	lines := []string{
+		lipgloss.NewStyle().Foreground(p.Muted).Width(innerWidth).Align(lipgloss.Center).
+			Render("No downloads yet"),
+		lipgloss.NewStyle().Foreground(p.Muted).Width(innerWidth).Align(lipgloss.Center).
+			Render("Files you save in Shinto show up here"),
+	}
+	topPad := maxInt((contentHeight-len(lines))/2, 0)
+	out := make([]string, 0, topPad+len(lines))
+	for i := 0; i < topPad; i++ {
+		out = append(out, "")
+	}
+	return append(out, lines...)
 }
 
 func (m model) View() string {
@@ -410,83 +677,33 @@ func (m model) View() string {
 
 	selectedIdx := indexOfID(m.downloads, m.selectedID)
 	innerWidth := maxInt(width-2, 1)
+	contentHeight := maxInt(height-2, 1)
 
 	var bodyLines []string
 	if len(m.downloads) == 0 {
-		// Centered both ways, dim -- an empty state, not a row, so it
-		// shouldn't compete with an actual download list for attention.
-		// box() already pads any content shorter than contentHeight with
-		// blank lines, so only the lines *above* the message need to be
-		// built here to push it down to the vertical middle.
-		contentHeight := maxInt(height, 3) - 2
-		topPad := maxInt((contentHeight-1)/2, 0)
-		bodyLines = make([]string, 0, topPad+1)
-		for i := 0; i < topPad; i++ {
-			bodyLines = append(bodyLines, "")
-		}
-		bodyLines = append(bodyLines, lipgloss.NewStyle().
-			Foreground(p.Muted).
-			Width(innerWidth).
-			Align(lipgloss.Center).
-			Render("No downloads yet."))
+		bodyLines = emptyStateLines(innerWidth, contentHeight, p)
 	} else {
-		for i, d := range m.downloads {
-			glyph, color := stateGlyphAndColor(d.State, p)
-			prefix := glyph
-			if prefix == "" {
-				prefix = " " // keeps rows lined up with glyph-bearing ones
-			}
-			var tail string
-			if d.State == StateInProgress {
-				tail = bar(progressPct(d), 20) + fmt.Sprintf(" %3d%%", int(progressPct(d)+0.5))
-			} else {
-				tail = stateLabel(d.State)
-			}
-			plain := prefix + " " + d.Filename + "  " + tail
-
-			var line string
-			// Stays highlighted through the action popup too -- selectedID
-			// doesn't change while the popup has focus (only popupSelected,
-			// the cursor within the popup's own action list, does), and
-			// popupID is set from selectedID the moment the popup opens, so
-			// checking just the index is enough regardless of m.focus. Not
-			// dimming this away once the popup comes up matters here
-			// because the popup no longer hides the list underneath it
-			// (see placeOverlay) -- with both context and the highlight
-			// visible together, it's obvious what the popup is acting on.
-			if i == selectedIdx {
-				// A single flat style over the whole (unstyled) line,
-				// padded to the full row width -- rather than wrapping an
-				// already-multi-colored, already-ANSI-terminated string in
-				// an outer Reverse(). That wrap only highlighted the
-				// glyph: each inner Foreground().Render() call ends with
-				// its own SGR reset, which cuts the outer reverse off
-				// right after the first one, leaving the rest of the row
-				// (and the row-padding lipgloss adds afterward, styled
-				// with a plain, non-reversed style) unhighlighted.
-				//
-				// p.Muted (not p.Accent) as the fill -- a dim, subtle bar
-				// rather than a bright block; still reads clearly as "this
-				// row" against the plain background without shouting.
-				line = lipgloss.NewStyle().
-					Background(p.Muted).
-					Foreground(p.Fg).
-					Width(innerWidth).
-					Render(plain)
-			} else {
-				line = lipgloss.NewStyle().Foreground(color).Render(prefix+" ") + d.Filename
-				if d.State == StateInProgress {
-					line += "  " + lipgloss.NewStyle().Foreground(p.Accent).Render(bar(progressPct(d), 20)) +
-						fmt.Sprintf(" %3d%%", int(progressPct(d)+0.5))
-				} else {
-					line += "  " + lipgloss.NewStyle().Foreground(color).Render(stateLabel(d.State))
-				}
-			}
-			bodyLines = append(bodyLines, line)
+		start := m.scroll
+		if start > len(m.downloads) {
+			start = 0
+		}
+		end := start + contentHeight
+		if end > len(m.downloads) {
+			end = len(m.downloads)
+		}
+		for i := start; i < end; i++ {
+			bodyLines = append(bodyLines, renderRow(m.downloads[i], i == selectedIdx, innerWidth, p))
 		}
 	}
 
-	frame := box(width, height, "Shinto Downloads", "j/k move  ⏎ act  c clear finished  q quit", p, bodyLines)
+	hint := "j/k move  ⏎ act  c clear finished  q quit"
+	if len(m.downloads) > contentHeight {
+		// Scroll affordance in the bottom border without eating a content row.
+		shown := fmt.Sprintf("%d–%d/%d", m.scroll+1, minInt(m.scroll+contentHeight, len(m.downloads)), len(m.downloads))
+		hint = shown + "  ·  " + hint
+	}
+
+	frame := box(width, height, frameTitle(m.downloads), hint, p, bodyLines)
 
 	d, ok := downloadByID(m.downloads, m.popupID)
 	if m.focus != focusPopup || !ok {
@@ -494,22 +711,32 @@ func (m model) View() string {
 	}
 
 	acts := actionsFor(d.State)
+	labelWidth := utf8.RuneCountInString("Cancel download") // widest action label
+	for _, a := range acts {
+		if w := lipgloss.Width(a.label); w > labelWidth {
+			labelWidth = w
+		}
+	}
 	var lines []string
 	for i, a := range acts {
-		s := lipgloss.NewStyle()
+		style := lipgloss.NewStyle().Width(labelWidth).Foreground(p.Fg)
 		if i == m.popupSelected {
-			s = s.Reverse(true)
+			style = style.Background(p.Selection).Foreground(p.Fg)
 		}
-		lines = append(lines, s.Render(a.label))
+		lines = append(lines, style.Render(a.label))
 	}
-	popupBody := strings.Join(lines, "\n")
+	subtitle := truncate(d.Filename, maxInt(labelWidth, 8))
 	popup := lipgloss.NewStyle().
 		Foreground(p.Fg).
-		Background(p.Bg).
+		Background(p.Card).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(p.Accent).
 		Padding(0, 1).
-		Render(lipgloss.NewStyle().Bold(true).Render("Action") + "\n" + popupBody)
+		Render(
+			lipgloss.NewStyle().Bold(true).Foreground(p.Accent).Render("Action") + "\n" +
+				lipgloss.NewStyle().Foreground(p.Muted).Render(subtitle) + "\n" +
+				strings.Join(lines, "\n"),
+		)
 
 	// Overlaid on the frame, not replacing it -- so the download the popup
 	// is acting on (and the rest of the list) stays visible around it,
@@ -526,6 +753,13 @@ func (m model) View() string {
 	return placeOverlay(x, y, popup, frame)
 }
 
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // progressPct is only ever meaningful for an in-progress download -- 0 for
 // anything else, and for an in-progress one with an unknown total size
 // (total_bytes == 0, seen for streamed/chunked downloads Chromium hasn't
@@ -535,6 +769,14 @@ func progressPct(d Download) float64 {
 		return 0
 	}
 	return float64(d.ReceivedBytes) / float64(d.TotalBytes) * 100.0
+}
+
+func init() {
+	// Force truecolor so Omarchy's hex palette isn't crushed to 256-color
+	// approximations (or stripped entirely when stdout isn't a tty during
+	// tests/pipes). The downloads window is always launched in a real
+	// terminal via xdg-terminal-exec.
+	lipgloss.SetColorProfile(termenv.TrueColor)
 }
 
 func main() {

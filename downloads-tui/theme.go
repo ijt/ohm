@@ -1,8 +1,10 @@
 // Reads Omarchy's live colors.toml so this TUI matches the same palette
 // Shinto's Qt side uses (see app/src/ThemeLoader.cpp's loadPalette(), which
-// this mirrors -- same as downloads-tui/src/theme.rs). No toml dependency:
-// colors.toml is flat `key = "value"` lines, so a hand-rolled line parser
-// is enough.
+// this mirrors -- same as downloads-tui/src/theme.rs). Extra keys
+// (selection, green, red, yellow, lighter_background) are read for TUI-only
+// polish; Qt's Palette struct doesn't need them for the omnibox. No toml
+// dependency: colors.toml is flat `key = "value"` lines, so a hand-rolled
+// line parser is enough.
 package main
 
 import (
@@ -16,10 +18,15 @@ import (
 )
 
 type Palette struct {
-	Bg     lipgloss.Color
-	Fg     lipgloss.Color
-	Accent lipgloss.Color
-	Muted  lipgloss.Color
+	Bg        lipgloss.Color
+	Fg        lipgloss.Color
+	Accent    lipgloss.Color
+	Muted     lipgloss.Color
+	Selection lipgloss.Color
+	Success   lipgloss.Color
+	Danger    lipgloss.Color
+	Warning   lipgloss.Color
+	Card      lipgloss.Color
 }
 
 func parseHex(hex string) (string, bool) {
@@ -74,7 +81,8 @@ func colorsTomlPath() string {
 }
 
 // Same fallback hex defaults as Palette's struct defaults in
-// app/src/ThemeLoader.h, for a missing file or a missing key.
+// app/src/ThemeLoader.h for the shared keys; selection/status colors fall
+// back to Tokyo Night values that match the rest of the defaults.
 func loadPalette() Palette {
 	toml := parseFlatToml(colorsTomlPath())
 	pick := func(key, def string) lipgloss.Color {
@@ -87,9 +95,14 @@ func loadPalette() Palette {
 		return lipgloss.Color(hex)
 	}
 	return Palette{
-		Bg:     pick("background", "#1a1b26"),
-		Fg:     pick("bright_foreground", "#c0caf5"),
-		Accent: pick("accent", "#7aa2f7"),
-		Muted:  pick("dark_foreground", "#565f89"),
+		Bg:        pick("background", "#1a1b26"),
+		Fg:        pick("bright_foreground", "#c0caf5"),
+		Accent:    pick("accent", "#7aa2f7"),
+		Muted:     pick("dark_foreground", "#565f89"),
+		Selection: pick("selection", "#292e42"),
+		Success:   pick("green", "#9ece6a"),
+		Danger:    pick("red", "#f7768e"),
+		Warning:   pick("yellow", "#e0af68"),
+		Card:      pick("lighter_background", "#24283b"),
 	}
 }
