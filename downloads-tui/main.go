@@ -645,6 +645,10 @@ func (m model) View() string {
 	selectedIdx := indexOfID(m.downloads, m.selectedID)
 	innerWidth := maxInt(width-2, 1)
 	contentHeight := maxInt(height-2, 1)
+	// One blank cell between the left border and row content -- keeps glyphs
+	// from kissing the frame.
+	const leftPad = 1
+	rowWidth := maxInt(innerWidth-leftPad, 1)
 
 	var bodyLines []string
 	if len(m.downloads) == 0 {
@@ -658,9 +662,21 @@ func (m model) View() string {
 		if end > len(m.downloads) {
 			end = len(m.downloads)
 		}
+		pad := strings.Repeat(" ", leftPad)
 		for i := start; i < end; i++ {
 			d := m.downloads[i]
-			bodyLines = append(bodyLines, renderRow(d, i == selectedIdx, innerWidth, p, m.ratesFor(d.ID)))
+			row := renderRow(d, i == selectedIdx, rowWidth, p, m.ratesFor(d.ID))
+			if i == selectedIdx {
+				// Selection style already painted the row; extend it through
+				// the left pad so the highlight meets the border cleanly.
+				bodyLines = append(bodyLines, lipgloss.NewStyle().
+					Background(p.Selection).
+					Render(pad)+row)
+			} else {
+				bodyLines = append(bodyLines, lipgloss.NewStyle().
+					Background(p.Bg).
+					Render(pad)+row)
+			}
 		}
 	}
 
