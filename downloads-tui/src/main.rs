@@ -347,7 +347,7 @@ fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {
 fn draw(frame: &mut Frame, downloads: &[Download], list_state: &mut ListState, focus: &Focus, palette: &Palette) {
     let area = frame.area();
     let block = Block::default()
-        .title(" \u{21e9} Shinto Downloads ") // ⇩
+        .title(" Shinto Downloads ")
         .title_alignment(Alignment::Center)
         .title_bottom(Line::from(" j/k move  \u{23ce} act  c clear finished  q quit ").centered()) // ⏎
         .borders(Borders::ALL)
