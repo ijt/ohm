@@ -645,10 +645,10 @@ func (m model) View() string {
 	selectedIdx := indexOfID(m.downloads, m.selectedID)
 	innerWidth := maxInt(width-2, 1)
 	contentHeight := maxInt(height-2, 1)
-	// One blank cell between the left border and row content -- keeps glyphs
-	// from kissing the frame.
-	const leftPad = 1
-	rowWidth := maxInt(innerWidth-leftPad, 1)
+	// One blank cell between each border and row content -- keeps glyphs
+	// from kissing the frame on either side.
+	const sidePad = 1
+	rowWidth := maxInt(innerWidth-2*sidePad, 1)
 
 	var bodyLines []string
 	if len(m.downloads) == 0 {
@@ -662,21 +662,18 @@ func (m model) View() string {
 		if end > len(m.downloads) {
 			end = len(m.downloads)
 		}
-		pad := strings.Repeat(" ", leftPad)
+		pad := strings.Repeat(" ", sidePad)
 		for i := start; i < end; i++ {
 			d := m.downloads[i]
 			row := renderRow(d, i == selectedIdx, rowWidth, p, m.ratesFor(d.ID))
+			// Extend selection (or bg) through both pads so the highlight
+			// meets the borders cleanly instead of leaving bare gutters.
+			padBg := p.Bg
 			if i == selectedIdx {
-				// Selection style already painted the row; extend it through
-				// the left pad so the highlight meets the border cleanly.
-				bodyLines = append(bodyLines, lipgloss.NewStyle().
-					Background(p.Selection).
-					Render(pad)+row)
-			} else {
-				bodyLines = append(bodyLines, lipgloss.NewStyle().
-					Background(p.Bg).
-					Render(pad)+row)
+				padBg = p.Selection
 			}
+			padStyled := lipgloss.NewStyle().Background(padBg).Render(pad)
+			bodyLines = append(bodyLines, padStyled+row+padStyled)
 		}
 	}
 
