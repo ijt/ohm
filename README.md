@@ -29,6 +29,18 @@ Chromium remains the right tool for Omarchy web apps and bundled Chromium extens
 
 ## Install
 
+### One-line (Omarchy)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
+```
+
+[`install.sh`](install.sh) installs any missing packages via `pacman`
+(asking first), clones to `~/.local/share/shinto/src` (or updates it if
+it's already there -- re-running this line later is how you upgrade),
+and does exactly what "From source" below does. Read it before piping it
+into `bash` if you'd rather not take that on faith.
+
 ### From source (Omarchy / Hyprland)
 
 ```bash
