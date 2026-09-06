@@ -1,15 +1,13 @@
 # Shinto
 
 ![Chrome (left) vs. Shinto (right) on the same page](docs/chrome-vs-shinto.png)
-*Chrome on the left, Shinto on the right.*
+*Chromium on the left, Shinto on the right.*
 
-*Chrome has too much chrome; Zen isn't zen enough.*
+*Chromium has too much chrome; Zen isn't zen enough.*
 
 *Shinto renders unto the window management gods what is theirs.*
 
-A page viewer for Omarchy. One window is one document. Hyprland is the tab bar.
-
-Zen reimplements workspaces, split view, and tabs inside the browser because most desktops are bad at those. Omarchy is not. Shinto is the shrine: a gate you walk through (the overlay omnibox) and then it is gone.
+Most web browsers have tabs and sometimes even window splitting to work around not having those in the host window system. In Omarchy, we have a great window manager hyprland with tiling and tabs, so why does the browser need to have its own tabs? It doesn't! That's why Shinto doesn't have them, or any other junk that gets in the way of you joyfully viewing your web pages.
 
 A small native C++/Qt6 app embedding QtWebEngine (`app/`) — not a Chrome extension driving real Chromium. There is no tab strip and no New-Tab-Page to fight with: the omnibox is a widget Shinto draws itself, never a page Chromium could show its own UI on top of.
 
