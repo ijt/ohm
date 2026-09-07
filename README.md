@@ -1,5 +1,9 @@
 # Shinto
 
+```bash
+curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
+```
+
 ![Chrome (left) vs. Shinto (right) on the same page](docs/chrome-vs-shinto.png)
 *Chromium on the left, Shinto on the right.*
 
