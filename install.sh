@@ -44,9 +44,16 @@ if command -v pacman >/dev/null 2>&1; then
     # here -- the device node is normally readable regardless of whether
     # this process actually has a controlling terminal attached, so it's
     # the read itself (not a pre-check) that has to be allowed to fail.
-    if read -r -p "Install these via sudo pacman? [Y/n] " reply 2>/dev/null </dev/tty; then
+    #
+    # Prompt on stdout, not `read -p`: that writes the prompt to stderr,
+    # and we redirect stderr on the read so a missing /dev/tty doesn't
+    # print a bash error. Combined, that used to swallow the prompt and
+    # look like a hang.
+    printf 'Install these via sudo pacman? [Y/n] '
+    if read -r reply </dev/tty 2>/dev/null; then
       :
     else
+      echo # no tty: finish the prompt line we just printed
       reply="y" # no controlling terminal to ask on
     fi
     case "$reply" in
