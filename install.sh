@@ -36,6 +36,7 @@ if command -v pacman >/dev/null 2>&1; then
   done
   if [[ ${#missing[@]} -gt 0 ]]; then
     echo "install.sh: installing missing packages: ${missing[*]}"
+    echo "install.sh: pacman --verbose (cmake and go are large; a quiet download bar is normal)."
     # A pipe (curl | bash) leaves no usable stdin for pacman's own y/N
     # prompts, so confirm once here (reading straight from the terminal,
     # not the exhausted stdin the script itself came in on) and then run
@@ -54,7 +55,9 @@ if command -v pacman >/dev/null 2>&1; then
         exit 1
         ;;
     esac
-    sudo pacman -S --needed --noconfirm "${missing[@]}"
+    # --verbose dumps Root/DB/cache paths up front. It does not add
+    # per-byte download logs -- that's --debug, which is much noisier.
+    sudo pacman -S --needed --noconfirm --verbose "${missing[@]}"
   fi
 else
   echo "install.sh: no pacman -- skipping automatic dependency install." >&2
