@@ -64,7 +64,6 @@ if command -v pacman >/dev/null 2>&1; then
     # --verbose dumps Root/DB/cache paths up front. It does not add
     # per-byte download logs -- that's --debug, which is much noisier.
     echo "install.sh: running sudo pacman -S --needed --noconfirm --verbose ${missing[*]}"
-    echo "install.sh: cmake and go are large; a quiet download bar can sit for a bit."
     sudo pacman -S --needed --noconfirm --verbose "${missing[@]}"
   fi
 else
