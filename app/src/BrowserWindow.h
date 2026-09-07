@@ -102,6 +102,9 @@ class BrowserWindow : public QMainWindow {
   void onOverlayNavigate(const QString &url, const QString &typedQuery);
   void onOverlayCancelled();
   void onNewPageShortcut();
+  // Ctrl+T: same spawn as onNewPageShortcut, but first groups the current
+  // window so Hyprland auto-joins the new one (groups are Shinto's tabs).
+  void onNewTabShortcut();
   void onEditAddressShortcut();
   void onBackShortcut();
   void onFindShortcut();

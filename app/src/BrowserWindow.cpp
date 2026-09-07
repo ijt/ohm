@@ -17,6 +17,7 @@
 #include "DownloadManager.h"
 #include "DownloadsTuiLauncher.h"
 #include "FindBar.h"
+#include "Hyprland.h"
 #include "OmniboxOverlay.h"
 
 namespace shinto {
@@ -292,7 +293,7 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
     sc->setContext(Qt::WindowShortcut);
     connect(sc, &QShortcut::activated, this, slot);
   };
-  addShortcut(QKeySequence(Qt::CTRL | Qt::Key_T), &BrowserWindow::onNewPageShortcut);
+  addShortcut(QKeySequence(Qt::CTRL | Qt::Key_T), &BrowserWindow::onNewTabShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_N), &BrowserWindow::onNewPageShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), &BrowserWindow::onEditAddressShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), &BrowserWindow::onEditAddressShortcut);
@@ -424,6 +425,14 @@ void BrowserWindow::onOverlayCancelled() {
 }
 
 void BrowserWindow::onNewPageShortcut() {
+  BrowserWindow::spawn(webView_->page()->profile(), history_, domains_, downloads_, QString());
+}
+
+void BrowserWindow::onNewTabShortcut() {
+  // Group the current window first so the new one auto-joins it (Hyprland
+  // group.auto_group). If it's already grouped this is a no-op; if hyprctl
+  // isn't there, spawn still happens and the page just opens as a tile.
+  ensureActiveWindowGrouped();
   BrowserWindow::spawn(webView_->page()->profile(), history_, domains_, downloads_, QString());
 }
 

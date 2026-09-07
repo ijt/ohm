@@ -9,6 +9,9 @@
 
 Most web browsers have tabs and sometimes even window splitting to work around not having those in the host window system. In Omarchy, we have a great window manager hyprland with tiling and tabs, so why does the browser need to have its own tabs? It doesn't! That's why Shinto doesn't have them, or any other junk that gets in the way of you joyfully viewing your web pages.
 
+![Hacker News, Omarchy, and YouTube as Hyprland group tabs](docs/hyprland-tabs.png)
+*Hyprland groups are the tabs. `Ctrl+T` opens a new one.*
+
 ## Why it starts quickly
 
 The app itself is the warm daemon — no separate hidden window needed to keep it alive. `shinto.service` runs it with zero windows open; opening a page asks the already-running process for a new window over a local socket. Warm opens measure well under 150ms, not seconds.
@@ -102,7 +105,8 @@ Browser (inside a Shinto window):
 
 | Key | Action |
 |-----|--------|
-| `Ctrl + T` / `Ctrl + N` | New empty page (new window) |
+| `Ctrl + T` | New empty page in the current Hyprland group (creates the group if needed) |
+| `Ctrl + N` | New empty page as a standalone window |
 | `Ctrl + L` / `Ctrl + K` | Edit this window's address (whole address selected, so typing replaces it). Escape goes back. |
 | `Alt + Left` | Back (configurable, see [Configuration](#configuration)) |
 | `Ctrl + F` | Find in page. Enter/Shift+Enter or the ↓/↑ buttons step through matches, Escape closes it. |
@@ -154,5 +158,5 @@ It's real Lua, so either setting can be computed however you like (env vars via 
 ## Notes
 
 - Dedicated QtWebEngine profile at `~/.local/share/shinto/profile/webengine` — your main Chromium logins are untouched.
-- `Ctrl+N` / `Ctrl+T` open a new empty window. `Ctrl+L` edits the address in this window, whole address selected. Escape goes back. On the empty gate, Ctrl+L is a no-op.
+- `Ctrl+T` opens a new empty page in the same Hyprland group as this window (and makes a group if there isn't one yet). `Ctrl+N` opens a new empty window of its own. `Ctrl+L` edits the address in this window, whole address selected. Escape goes back. On the empty gate, Ctrl+L is a no-op.
 - `Super + Shift + B` stays Omarchy's default-browser launcher (`omarchy-launch-browser` / XDG) until you run `shinto default` or `omarchy default browser shinto`.
