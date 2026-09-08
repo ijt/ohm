@@ -4,14 +4,14 @@
 # then `omarchy default browser shinto` (once Omarchy lists it).
 
 pkgname=shinto-git
-pkgver=0.1.0.r0.g51590a4
+pkgver=0.0.1.r0.g0000000
 pkgrel=1
 pkgdesc="Page viewer for Omarchy — one window, one page; Hyprland is the tab bar"
 arch=('x86_64')
 url="https://github.com/ijt/shinto"
 license=('MIT')
 depends=('qt6-base' 'qt6-webengine' 'lua54')
-makedepends=('git' 'cmake' 'ninja')
+makedepends=('git' 'cmake' 'go')
 provides=('shinto')
 conflicts=('shinto')
 install=shinto-git.install
@@ -20,15 +20,16 @@ sha256sums=('SKIP')
 
 pkgver() {
   cd shinto
-  # No release tags yet: 0.1.0.r<commits>.g<hash>
-  printf "0.1.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  git describe --long --tags --abbrev=7 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' \
+    || printf "0.0.1.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 build() {
-  cmake -S shinto/app -B build -G Ninja \
+  cmake -S shinto/app -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr
-  cmake --build build
+  cmake --build build --parallel "$(nproc)"
+  (cd shinto/downloads-tui && go build -o shinto-downloads .)
 }
 
 package() {

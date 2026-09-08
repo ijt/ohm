@@ -1,0 +1,40 @@
+# Maintainer: Isaac Turner <ijt@github>
+# Versioned package for GitHub Releases (`pacman -U` the .pkg.tar.zst).
+# The rolling AUR recipe is packaging/PKGBUILD (`shinto-git`).
+
+pkgname=shinto
+pkgver=0.0.1
+pkgrel=1
+pkgdesc="Page viewer for Omarchy — one window, one page; Hyprland is the tab bar"
+arch=('x86_64')
+url="https://github.com/ijt/shinto"
+license=('MIT')
+depends=('qt6-base' 'qt6-webengine' 'lua54')
+makedepends=('git' 'cmake' 'go')
+conflicts=('shinto-git')
+install=shinto.install
+options=('!debug')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+prepare() {
+  # GitHub's tag archive may unpack as shinto-v0.0.1; git archive uses shinto-0.0.1.
+  if [[ -d "$srcdir/$pkgname-v$pkgver" && ! -d "$srcdir/$pkgname-$pkgver" ]]; then
+    mv "$srcdir/$pkgname-v$pkgver" "$srcdir/$pkgname-$pkgver"
+  fi
+}
+
+build() {
+  cmake -S "$pkgname-$pkgver/app" -B build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr
+  cmake --build build --parallel "$(nproc)"
+  (cd "$pkgname-$pkgver/downloads-tui" && go build -o shinto-downloads .)
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+  install -Dm644 "$pkgname-$pkgver/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$pkgname-$pkgver/hypr.lua" "$pkgdir/usr/share/shinto/hypr.lua"
+  install -Dm755 "$pkgname-$pkgver/theme-set-hook.sh" "$pkgdir/usr/share/shinto/theme-set-hook.sh"
+}

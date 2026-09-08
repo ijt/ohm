@@ -1,0 +1,10 @@
+post_install() {
+  echo "Enable the warm daemon:"
+  echo "  systemctl --user enable --now shinto.service"
+  echo "Then set as default (Omarchy Setup > Defaults > Browser once listed), or:"
+  echo "  xdg-settings set default-web-browser shinto.desktop"
+}
+
+post_upgrade() {
+  post_install
+}

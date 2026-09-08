@@ -28,6 +28,7 @@ Usage: shinto [command] [url]
   shinto start|stop|status
   shinto theme       Refresh overlay colors from the Omarchy theme
   shinto default     Make Shinto the XDG / Omarchy default browser
+  shinto --version   Print version
 EOF
 }
 
@@ -362,6 +363,10 @@ case $cmd in
   --daemon)
     require_bin
     exec "$BIN" --daemon
+    ;;
+  --version)
+    require_bin
+    exec "$BIN" --version
     ;;
   default)
     install_default

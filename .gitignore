@@ -1,1 +1,8 @@
 app/build/
+
+# makepkg leftovers
+packaging/**/src/
+packaging/**/pkg/
+packaging/**/*.pkg.tar.*
+packaging/**/*.tar.gz
+packaging/**/*.tar.zst

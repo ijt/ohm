@@ -72,9 +72,17 @@ You can also opt in later with `shinto default`.
 ./shinto uninstall   # data is left in ~/.local/share/shinto
 ```
 
-### Packaged (AUR)
+### Packaged (Arch / Omarchy)
 
-A `shinto-git` PKGBUILD lives in [`packaging/`](packaging/). Build/install:
+Download the latest `shinto-*-x86_64.pkg.tar.zst` from
+[Releases](https://github.com/ijt/shinto/releases) and:
+
+```bash
+sudo pacman -U shinto-*-x86_64.pkg.tar.zst
+systemctl --user enable --now shinto.service
+```
+
+A rolling `shinto-git` PKGBUILD lives in [`packaging/`](packaging/). Build/install from a clone:
 
 ```bash
 cd packaging
@@ -94,15 +102,15 @@ omarchy default browser shinto
 
 ```
 /usr/bin/shinto
+/usr/bin/shinto-downloads
 /usr/share/applications/shinto.desktop
 /usr/share/icons/hicolor/128x128/apps/shinto.png
 /usr/lib/systemd/user/shinto.service
 ```
 
-`shinto-downloads` isn't part of this -- it's a separate Go build (see
-[`downloads-tui/`](downloads-tui/)), not yet wired into `cmake --install`
-or the AUR `PKGBUILD`. `./shinto install` handles it for a from-source
-install (see above); packaging it properly is still open work.
+`shinto-downloads` is included in the GitHub/AUR packages (and in
+`cmake --install` if you built it first). `./shinto install` also
+symlinks it for a from-source install.
 
 ## Keys
 

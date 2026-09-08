@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(shinto-app LANGUAGES CXX)
+project(shinto-app VERSION 0.0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,6 +48,9 @@ target_link_libraries(shinto-bin PRIVATE
   PkgConfig::LUA
 )
 
+target_compile_definitions(shinto-bin PRIVATE
+  SHINTO_VERSION="${PROJECT_VERSION}")
+
 include(GNUInstallDirs)
 
 # Packaged name is `shinto` (what desktop files and systemd ExecStart call).
@@ -56,6 +59,12 @@ include(GNUInstallDirs)
 install(PROGRAMS $<TARGET_FILE:shinto-bin>
   DESTINATION ${CMAKE_INSTALL_BINDIR}
   RENAME shinto)
+
+# Built separately (see downloads-tui/); skip quietly if it isn't there yet
+# so a C++-only cmake --install still works.
+install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/../downloads-tui/shinto-downloads"
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
+  OPTIONAL)
 
 set(_shinto_packaging_dir "${CMAKE_CURRENT_SOURCE_DIR}/../packaging")
 install(FILES "${_shinto_packaging_dir}/shinto.desktop"

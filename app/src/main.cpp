@@ -111,6 +111,10 @@ int main(int argc, char *argv[]) {
                stdout);
     return 0;
   }
+  if (args.contains(QStringLiteral("--version"))) {
+    std::fprintf(stdout, "shinto %s\n", SHINTO_VERSION);
+    return 0;
+  }
 
   // omarchy-launch-browser maps --private to --incognito/--inprivate and
   // appends them before the URL. Shinto has no private profile yet, so drop
