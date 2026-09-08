@@ -10,7 +10,7 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets WebEngineWidgets Sql)
+find_package(Qt6 REQUIRED COMPONENTS Widgets WebEngineWidgets Sql PrintSupport)
 
 find_package(PkgConfig REQUIRED)
 # Real Lua, not a hand-rolled parser -- ~/.config/shinto/config.lua (see
@@ -45,6 +45,7 @@ target_link_libraries(shinto-bin PRIVATE
   Qt6::Widgets
   Qt6::WebEngineWidgets
   Qt6::Sql
+  Qt6::PrintSupport
   PkgConfig::LUA
 )
 

@@ -1,11 +1,15 @@
 #include "BrowserWindow.h"
 
 #include <QKeyEvent>
+#include <QPrintDialog>
+#include <QPrinter>
 #include <QResizeEvent>
 #include <QShortcut>
+#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QWebEngineFindTextResult>
+#include <QWebEngineFrame>
 #include <QWebEngineFullScreenRequest>
 #include <QWebEngineHistory>
 #include <QWebEngineNewWindowRequest>
@@ -42,6 +46,7 @@ bool isShintoShortcut(const QKeyEvent *ke, const QKeySequence &backShortcut) {
     case Qt::Key_W:
     case Qt::Key_F:
     case Qt::Key_J:
+    case Qt::Key_P:
     case Qt::Key_R:
       return true;
     default:
@@ -261,8 +266,31 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   // page (confirmed: "Continue with Apple" on x.com).
   connect(webView_->page(), &QWebEnginePage::newWindowRequested, this,
           [this](QWebEngineNewWindowRequest &request) {
+            // Chromium's print-preview UI lives at chrome://print. QtWebEngine
+            // doesn't implement that page, so fulfilling the request as a
+            // BrowserWindow is a blank white window -- the reported PDF-viewer
+            // "Print" button failure. Drop it; printRequested (below) is the
+            // path Qt actually wants the embedder to handle.
+            const QString scheme = request.requestedUrl().scheme();
+            if (scheme == QLatin1String("chrome") || scheme == QLatin1String("chrome-untrusted")) {
+              return;
+            }
             BrowserWindow::spawnForRequest(webView_->page()->profile(), history_, domains_,
                                             downloads_, request);
+          });
+  // window.print() and the PDF viewer plugin's print button both emit this
+  // instead of showing Chromium's own print dialog. Unhandled, Chromium
+  // still tries to open its print-preview WebContents -- which, with the
+  // newWindowRequested handler above, used to become a blank window.
+  // Deferred: this signal fires from inside Chromium's print-preview
+  // setup, and QPrintDialog::exec() is a nested event loop -- running it
+  // synchronously here used to race the preview WebContents into a blank
+  // window of our own. Let that setup finish first.
+  connect(webView_->page(), &QWebEnginePage::printRequested, this,
+          [this] { QTimer::singleShot(0, this, &BrowserWindow::onPrintRequested); });
+  connect(webView_->page(), &QWebEnginePage::printRequestedByFrame, this,
+          [this](QWebEngineFrame) {
+            QTimer::singleShot(0, this, &BrowserWindow::onPrintRequested);
           });
   // Fullscreen API: enablement lives on the shared profile; accepting the
   // request here is what actually lets the element fill the viewport, and
@@ -301,6 +329,7 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   addShortcut(config_.backShortcut, &BrowserWindow::onBackShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), &BrowserWindow::onFindShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_R), &BrowserWindow::onReloadShortcut);
+  addShortcut(QKeySequence(Qt::CTRL | Qt::Key_P), &BrowserWindow::onPrintRequested);
   // The conventional browser "show downloads" binding (Chrome/Firefox),
   // unused in Shinto otherwise -- independent of downloadBar_'s click
   // handler so the downloads list stays reachable even when nothing is
@@ -325,7 +354,10 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   refreshDownloadBar();
 }
 
-BrowserWindow::~BrowserWindow() { instances_.removeOne(this); }
+BrowserWindow::~BrowserWindow() {
+  delete printer_;
+  instances_.removeOne(this);
+}
 
 void BrowserWindow::resizeEvent(QResizeEvent *event) {
   QMainWindow::resizeEvent(event);
@@ -485,6 +517,53 @@ void BrowserWindow::onReloadShortcut() {
   // gate is up (Empty/Gate).
   if (state_ != State::Loaded) return;
   webView_->reload();
+}
+
+void BrowserWindow::onPrintRequested() {
+  // Meaningless while the gate is up -- same as find/reload. Also a no-op
+  // if a job is already in flight: the PDF viewer allows the print button
+  // to be mashed, and Ctrl+P can race the signal from window.print().
+  if (state_ != State::Loaded || printer_) return;
+
+  printer_ = new QPrinter(QPrinter::HighResolution);
+  printer_->setDocName(windowTitle());
+
+  QPrintDialog dialog(printer_, this);
+  dialog.setWindowTitle(QStringLiteral("Print"));
+  // PrintToFile is the Unix "save as PDF" path in this dialog; page range
+  // and collate are what a real print dialog is expected to offer.
+  dialog.setOptions(QAbstractPrintDialog::PrintToFile | QAbstractPrintDialog::PrintShowPageSize |
+                    QAbstractPrintDialog::PrintPageRange | QAbstractPrintDialog::PrintCollateCopies);
+
+  if (dialog.exec() != QDialog::Accepted) {
+    delete printer_;
+    printer_ = nullptr;
+    return;
+  }
+
+  // QWebEngineView::print() to a PdfFormat QPrinter is unreliable;
+  // printToPdf is the supported "print to file" path. printer_ still has
+  // to live until pdfPrintingFinished -- same async constraint as print().
+  if (printer_->outputFormat() == QPrinter::PdfFormat && !printer_->outputFileName().isEmpty()) {
+    connect(
+        webView_, &QWebEngineView::pdfPrintingFinished, this,
+        [this](const QString &, bool) {
+          delete printer_;
+          printer_ = nullptr;
+        },
+        Qt::SingleShotConnection);
+    webView_->printToPdf(printer_->outputFileName(), printer_->pageLayout());
+    return;
+  }
+
+  connect(
+      webView_, &QWebEngineView::printFinished, this,
+      [this](bool) {
+        delete printer_;
+        printer_ = nullptr;
+      },
+      Qt::SingleShotConnection);
+  webView_->print(printer_);
 }
 
 void BrowserWindow::doFind(const QString &text, bool backward) {

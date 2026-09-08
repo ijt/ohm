@@ -17,9 +17,10 @@
 #include "PopularDomains.h"
 #include "ThemeLoader.h"
 
+class QPrinter;
+class QResizeEvent;
 class QWebEngineNewWindowRequest;
 class QWebEngineProfile;
-class QResizeEvent;
 
 namespace shinto {
 
@@ -110,6 +111,10 @@ class BrowserWindow : public QMainWindow {
   void onBackShortcut();
   void onFindShortcut();
   void onReloadShortcut();
+  // PDF-viewer print button and window.print() both arrive as
+  // QWebEnginePage::printRequested -- QtWebEngine does not show a print
+  // dialog on its own. Ctrl+P uses the same path.
+  void onPrintRequested();
   // `backward` selects QWebEnginePage::FindBackward -- the ↑/previous
   // direction. An empty `text` just clears any existing highlighting
   // (searchChanged's "cleared the box" case) rather than searching.
@@ -135,6 +140,10 @@ class BrowserWindow : public QMainWindow {
   // the URL Shinto itself requested).
   bool loadOk_ = false;
   QString pendingTypedQuery_;
+  // Heap-allocated because QWebEngineView::print() is async -- a stack
+  // QPrinter would be destroyed before Chromium finished painting. Lives
+  // from dialog-accept until printFinished (or this window's destructor).
+  QPrinter *printer_ = nullptr;
 
   static QVector<BrowserWindow *> instances_;
   static Palette currentPalette_;
