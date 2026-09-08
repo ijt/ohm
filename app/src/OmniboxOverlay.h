@@ -36,6 +36,8 @@ class QResizeEvent;
 
 namespace shinto {
 
+class Spinner;
+
 class OmniboxOverlay : public QWidget {
   Q_OBJECT
 
@@ -55,9 +57,10 @@ class OmniboxOverlay : public QWidget {
   // Hides without navigating anywhere -- what Escape does.
   void hideOverlay();
 
-  // A thin accent-colored line at the top, `percent` of the window wide --
-  // the only feedback while the gate stays up waiting for a just-submitted
-  // navigation to actually load (see BrowserWindow::onOverlayNavigate).
+  // A thin accent-colored line at the top, `percent` of the window wide.
+  // Chromium reports 100% before it has a frame to paint, so the bar is
+  // hidden at 100% and a small spinner next to the URL keeps moving until
+  // hideOverlay() (see BrowserWindow::onOverlayNavigate).
   void setProgress(int percent);
 
  signals:
@@ -108,6 +111,8 @@ class OmniboxOverlay : public QWidget {
   int suggestionListHeight() const;
   void startShimmer();
   void stopShimmer();
+  void startSpinner();
+  void stopSpinner();
   // The suggestion dropdown's per-row "x" button: forgets it (permanently,
   // from HistoryStore or PopularDomains, whichever it came from) and
   // refreshes the list.
@@ -131,6 +136,7 @@ class OmniboxOverlay : public QWidget {
   QLineEdit *input_;
   QListWidget *list_;
   QWidget *progressBar_;
+  Spinner *spinner_;
   QGraphicsOpacityEffect *inputOpacity_;
   QPropertyAnimation *shimmer_;
   int progress_ = 0;

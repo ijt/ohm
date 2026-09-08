@@ -398,8 +398,9 @@ void BrowserWindow::onOverlayNavigate(const QString &url, const QString &typedQu
   // hiding it right away would flash the previous page's last frame while
   // the new one loads, since navigation is asynchronous. state_ stays Gate
   // (or Empty) in the meantime, so a resize mid-load still repositions the
-  // still-visible gate correctly. The progress bar is the only feedback
-  // that anything is happening during that wait.
+  // still-visible gate correctly. Feedback while waiting: URL shimmer,
+  // then the top progress bar plus a spinner (the bar hits 100% before
+  // Chromium has a frame, so the spinner is what covers that last gap).
   overlay_->setProgress(0);
   // Picked up by the persistent loadFinished handler above once (and only
   // if) this navigation actually succeeds -- see its comment for why this

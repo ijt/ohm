@@ -12,15 +12,69 @@
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QMouseEvent>
+#include <QPainter>
+#include <QPen>
 #include <QPropertyAnimation>
 #include <QResizeEvent>
 #include <QSet>
 #include <QSignalBlocker>
+#include <QTimer>
 #include <QToolButton>
 
 #include "ReadlineEditing.h"
 
 namespace shinto {
+
+// Accent-colored arc next to the URL, kept spinning until the gate hides.
+// Chromium's loadProgress hits 100% before it has a frame to paint, so the
+// top bar vanishes while the overlay is still up -- this is the "something
+// is still happening" cue for that gap (and for the rest of the load once
+// the URL shimmer has handed off).
+class Spinner : public QWidget {
+ public:
+  explicit Spinner(QWidget *parent = nullptr) : QWidget(parent) {
+    setFixedSize(kSize, kSize);
+    hide();
+    connect(&timer_, &QTimer::timeout, this, [this] {
+      angle_ = (angle_ + 10) % 360;
+      update();
+    });
+    timer_.setInterval(30);
+  }
+
+  void setColor(const QColor &color) {
+    color_ = color;
+    update();
+  }
+
+  void start() {
+    if (!timer_.isActive()) timer_.start();
+    show();
+  }
+
+  void stop() {
+    timer_.stop();
+    hide();
+  }
+
+ protected:
+  void paintEvent(QPaintEvent *) override {
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+    constexpr int kPad = 2;
+    const QRectF r = QRectF(rect()).adjusted(kPad, kPad, -kPad, -kPad);
+    QPen pen(color_, 2.0, Qt::SolidLine, Qt::RoundCap);
+    p.setPen(pen);
+    // Qt angles: 1/16th of a degree, 0 at 3 o'clock, positive CCW.
+    p.drawArc(r, -angle_ * 16, 270 * 16);
+  }
+
+ private:
+  static constexpr int kSize = 16;
+  QTimer timer_;
+  QColor color_ = Qt::white;
+  int angle_ = 0;
+};
 
 namespace {
 constexpr int kMargin = 24;
@@ -61,6 +115,7 @@ OmniboxOverlay::OmniboxOverlay(HistoryStore *history, PopularDomains *domains,
   progressBar_ = new QWidget(this);
   progressBar_->setObjectName(QStringLiteral("ProgressBar"));
   progressBar_->hide();
+  spinner_ = new Spinner(this);
   // No QLayout -- position is managed by hand in layoutInput().
 
   // Loading a real page has some inherent latency (DNS, connect, TLS)
@@ -85,6 +140,7 @@ void OmniboxOverlay::applyPalette(const Palette &palette) {
   QPalette pal = input_->palette();
   pal.setColor(QPalette::PlaceholderText, QColor(palette.muted));
   input_->setPalette(pal);
+  spinner_->setColor(QColor(palette.accent));
   updateSuggestionSelectionStyle();
 }
 
@@ -94,6 +150,7 @@ void OmniboxOverlay::showGate(const QString &prefill) {
   progress_ = 0;
   progressBar_->hide();
   stopShimmer();
+  stopSpinner();
   layoutInput();
   show();
   raise();
@@ -106,14 +163,19 @@ void OmniboxOverlay::showGate(const QString &prefill) {
 void OmniboxOverlay::hideOverlay() {
   clearSuggestions();
   stopShimmer();
+  stopSpinner();
   hide();
 }
 
 void OmniboxOverlay::setProgress(int percent) {
   progress_ = qBound(0, percent, 100);
-  // Real progress data has arrived -- the progress bar takes over as
-  // feedback from here.
-  if (progress_ > 0) stopShimmer();
+  // Real progress data has arrived -- the bar takes over from the URL
+  // shimmer, and the spinner stays until hideOverlay() because Chromium
+  // reports 100% (bar hides) before it has a frame to paint.
+  if (progress_ > 0) {
+    stopShimmer();
+    startSpinner();
+  }
   progressBar_->setVisible(progress_ > 0 && progress_ < 100 && isVisible());
   layoutProgressBar();
 }
@@ -126,6 +188,17 @@ void OmniboxOverlay::startShimmer() {
 void OmniboxOverlay::stopShimmer() {
   shimmer_->stop();
   inputOpacity_->setOpacity(1.0);
+}
+
+void OmniboxOverlay::startSpinner() {
+  if (!isVisible()) return;
+  spinner_->start();
+  layoutInput();
+}
+
+void OmniboxOverlay::stopSpinner() {
+  spinner_->stop();
+  layoutInput();
 }
 
 void OmniboxOverlay::resizeEvent(QResizeEvent *event) {
@@ -143,10 +216,19 @@ void OmniboxOverlay::layoutInput() {
   // Full window width (minus margins) to type into -- was capped at a
   // modest fixed width, which made a long URL or search query scroll
   // inside a narrow field instead of just being visible. Suggestions drop
-  // down below it, matching this same width.
+  // down below it, matching this same width. The spinner, when shown,
+  // sits on the right of the field so a long URL doesn't cover it.
   const int h = input_->sizeHint().height();
   const int w = qMax(0, width() - 2 * kMargin);
-  input_->setGeometry(kMargin, kMargin, w, h);
+  int inputW = w;
+  if (spinner_->isVisible()) {
+    constexpr int kGap = 10;
+    const int spinnerY = kMargin + (h - spinner_->height()) / 2;
+    spinner_->setGeometry(kMargin + w - spinner_->width(), spinnerY, spinner_->width(),
+                          spinner_->height());
+    inputW = qMax(0, w - spinner_->width() - kGap);
+  }
+  input_->setGeometry(kMargin, kMargin, inputW, h);
   list_->setGeometry(kMargin, kMargin + h + 4, w, suggestionListHeight());
   list_->setVisible(!items_.isEmpty());
   layoutProgressBar();
