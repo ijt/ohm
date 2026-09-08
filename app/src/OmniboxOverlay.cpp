@@ -160,6 +160,23 @@ void OmniboxOverlay::showGate(const QString &prefill) {
   }
 }
 
+void OmniboxOverlay::showLoading(const QString &url) {
+  {
+    const QSignalBlocker blocker(input_);
+    input_->setText(url);
+    input_->setCursorPosition(input_->text().length());
+  }
+  clearSuggestions();
+  progress_ = 0;
+  progressBar_->hide();
+  stopSpinner();
+  layoutInput();
+  show();
+  raise();
+  startShimmer();
+  input_->setFocus();
+}
+
 void OmniboxOverlay::hideOverlay() {
   clearSuggestions();
   stopShimmer();

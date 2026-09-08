@@ -34,11 +34,12 @@ class BrowserWindow : public QMainWindow {
 
  public:
   // Creates, registers, shows, and returns a new window. `url` empty means
-  // start in the empty-gate state; non-empty loads it immediately. Reads
-  // config.lua fresh (see Config.h) for this one window -- the daemon can
-  // stay warm for days, so config shouldn't be stuck at whatever it read
-  // at daemon startup; loadConfig() is cheap next to everything else spawn
-  // already does.
+  // start in the empty-gate state; non-empty shows that URL on the gate
+  // and loads it, hiding the gate once the page paints. Reads config.lua
+  // fresh (see Config.h) for this one window -- the daemon can stay warm
+  // for days, so config shouldn't be stuck at whatever it read at daemon
+  // startup; loadConfig() is cheap next to everything else spawn already
+  // does.
   static BrowserWindow *spawn(QWebEngineProfile *profile, HistoryStore *history,
                                PopularDomains *domains, DownloadManager *downloads,
                                const QString &url);

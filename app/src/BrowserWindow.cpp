@@ -310,9 +310,13 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   if (url.isEmpty()) {
     enterEmpty(showEmptyGate);
   } else {
-    state_ = State::Loaded;
-    webView_->setUrl(QUrl(url));
-    overlay_->hideOverlay();
+    // Keep the gate up with the destination visible until the page paints.
+    // Hiding it here flashes a blank webview -- or worse, the empty
+    // "search or url" prompt -- while the real URL is already loading.
+    state_ = State::Empty;
+    relayout();
+    overlay_->showLoading(url);
+    onOverlayNavigate(url, QString());
   }
 
   // Reflects a download already in progress (started before this window

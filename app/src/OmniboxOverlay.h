@@ -54,6 +54,12 @@ class OmniboxOverlay : public QWidget {
   // widget the full window area before calling this.
   void showGate(const QString &prefill = QString());
 
+  // A window opened already aimed at a destination (CLI / xdg-open).
+  // Prefills `url` without selecting it -- select-all would look like
+  // Ctrl+L "edit this" -- and starts the loading shimmer so the gate
+  // reads as "this is loading", not the empty "search or url" prompt.
+  void showLoading(const QString &url);
+
   // Hides without navigating anywhere -- what Escape does.
   void hideOverlay();
 
