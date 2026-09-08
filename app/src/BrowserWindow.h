@@ -75,15 +75,13 @@ class BrowserWindow : public QMainWindow {
  private:
   enum class State { Empty, Loaded, Gate };
 
-  // Shared by spawn() and spawnForRequest() -- both need the same
-  // registration/sizing/show() boilerplate, but a popup shouldn't show the
-  // empty-gate's location bar over its blank initial frame (there's no
-  // user-typed destination to show there; request.openIn() is about to
-  // navigate it to a real URL the user never typed) -- see
-  // spawnForRequest()'s own comment for the concrete complaint this fixes.
+  // Shared by spawn() and spawnForRequest(). `mapWindow` is false for
+  // popups so spawnForRequest() can openIn() before the first map -- an
+  // idle QWebEngineView flickers on first show, and mapping before openIn
+  // would paint the empty gate (or about:blank) for a frame.
   static BrowserWindow *spawnInternal(QWebEngineProfile *profile, HistoryStore *history,
                                        PopularDomains *domains, DownloadManager *downloads,
-                                       const QString &url, bool showEmptyGate);
+                                       const QString &url, bool showEmptyGate, bool mapWindow);
 
   BrowserWindow(QWebEngineProfile *profile, HistoryStore *history, PopularDomains *domains,
                 DownloadManager *downloads, const QString &url, bool showEmptyGate);

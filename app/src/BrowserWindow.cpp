@@ -108,17 +108,18 @@ Palette BrowserWindow::currentPalette_;
 BrowserWindow *BrowserWindow::spawn(QWebEngineProfile *profile, HistoryStore *history,
                                      PopularDomains *domains, DownloadManager *downloads,
                                      const QString &url) {
-  return spawnInternal(profile, history, domains, downloads, url, /*showEmptyGate=*/true);
+  return spawnInternal(profile, history, domains, downloads, url, /*showEmptyGate=*/true,
+                       /*mapWindow=*/true);
 }
 
 BrowserWindow *BrowserWindow::spawnInternal(QWebEngineProfile *profile, HistoryStore *history,
                                              PopularDomains *domains, DownloadManager *downloads,
-                                             const QString &url, bool showEmptyGate) {
+                                             const QString &url, bool showEmptyGate, bool mapWindow) {
   auto *win = new BrowserWindow(profile, history, domains, downloads, url, showEmptyGate);
   win->setAttribute(Qt::WA_DeleteOnClose);
   instances_.push_back(win);
   win->resize(1200, 800);
-  win->show();
+  if (mapWindow) win->show();
   return win;
 }
 
@@ -126,27 +127,24 @@ BrowserWindow *BrowserWindow::spawnForRequest(QWebEngineProfile *profile, Histor
                                                PopularDomains *domains,
                                                DownloadManager *downloads,
                                                QWebEngineNewWindowRequest &request) {
-  // showEmptyGate=false: a popup has no user-typed destination to show in
-  // a location bar -- it's about to be navigated (via openIn() below) to
-  // wherever the opener's window.open()/link pointed, which the user never
-  // typed anywhere. Showing the gate here (even briefly, blank, before the
-  // real page loads) reads as "type a URL", which is actively misleading
-  // for a window that's already mid-navigation on the caller's behalf
-  // (reported concretely: the location bar showing while a link-opened
-  // window was just loading).
+  // mapWindow=false: openIn() below has to happen before the first map.
+  // Mapping first painted a full-window empty gate ("search or url") over
+  // about:blank -- the overlay is a child QWidget, visible by default,
+  // and showEmptyGate=false only skipped showGate(), it never hid it.
+  // Reported concretely: clicking a target=_blank link showed a blank
+  // location bar until the real page finished loading.
   BrowserWindow *win = spawnInternal(profile, history, domains, downloads, QString(),
-                                      /*showEmptyGate=*/false);
-  // openIn() must be called before this handler (spawnForRequest is
-  // called synchronously from it) returns, or Qt rejects the window-open
-  // request outright -- see its own doc comment for why this, not
-  // request.requestedUrl(), is what actually fixes OAuth popups.
-  request.openIn(win->webView_->page());
-  // spawnInternal(..., QString(), false) took the Empty path (enterEmpty(),
-  // gate left hidden over about:blank) since there's no URL to hand it yet
-  // at this point -- openIn() just started the real navigation, so drive
-  // state_ the same way onOverlayNavigate() does for an ordinary
-  // navigation (hideOverlay() here is a no-op given the gate was never
-  // shown, but keeps this handler identical in shape to that one).
+                                      /*showEmptyGate=*/false, /*mapWindow=*/false);
+  const QUrl dest = request.requestedUrl();
+  if (dest.isValid() && !dest.isEmpty() && dest != QUrl(QStringLiteral("about:blank"))) {
+    // Same loading gate as a CLI `shinto <url>`: destination visible,
+    // shimmering, until the page paints. Empty requestedUrl (some OAuth
+    // popups) stays overlay-hidden -- openIn() still has a real
+    // WebContents, just no URL string we could honestly show.
+    win->overlay_->showLoading(dest.toString());
+    win->relayout();
+  }
+  // Connect before openIn() so a synchronous loadFinished can't slip past.
   connect(
       win->webView_->page(), &QWebEnginePage::loadFinished, win,
       [win](bool) {
@@ -155,6 +153,12 @@ BrowserWindow *BrowserWindow::spawnForRequest(QWebEngineProfile *profile, Histor
         win->webView_->setFocus();
       },
       Qt::SingleShotConnection);
+  // openIn() must be called before this handler returns, or Qt rejects
+  // the window-open request outright -- see spawnForRequest()'s own doc
+  // comment for why this, not request.requestedUrl() + setUrl(), is what
+  // actually fixes OAuth popups.
+  request.openIn(win->webView_->page());
+  win->show();
   return win;
 }
 
@@ -337,7 +341,17 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_J), &BrowserWindow::launchDownloadsTui);
 
   if (url.isEmpty()) {
-    enterEmpty(showEmptyGate);
+    if (showEmptyGate) {
+      enterEmpty(true);
+    } else {
+      // Popup path (spawnForRequest): openIn() is about to hand this page
+      // a real WebContents. Don't load about:blank -- its loadFinished
+      // would fire the SingleShot that hides the loading overlay, or
+      // (if cancelled by openIn without a finished signal) leave the
+      // empty gate up until the real page paints. Don't show the gate
+      // either; overlay starts hidden (OmniboxOverlay ctor).
+      overlay_->hideOverlay();
+    }
   } else {
     // Keep the gate up with the destination visible until the page paints.
     // Hiding it here flashes a blank webview -- or worse, the empty
@@ -414,13 +428,8 @@ void BrowserWindow::enterEmpty(bool showGate) {
   // looking empty -- needed regardless of showGate, since the gate (when
   // shown at all) fully covers it either way.
   webView_->setUrl(QUrl(QStringLiteral("about:blank")));
-  // A freshly-opened window with nothing typed into it yet (Ctrl+T/Ctrl+N)
-  // wants the gate so there's somewhere to type; a popup a link/window.open()
-  // just opened (spawnForRequest(), showGate=false) is about to be
-  // navigated to a real URL the user never typed, so showing a location
-  // bar over it -- even blank, even briefly -- would misrepresent it as
-  // "type here" instead of "loading".
   if (showGate) overlay_->showGate();
+  else overlay_->hideOverlay();
 }
 
 void BrowserWindow::showGateOverPage() {

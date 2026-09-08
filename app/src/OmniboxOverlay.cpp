@@ -99,6 +99,11 @@ OmniboxOverlay::OmniboxOverlay(HistoryStore *history, PopularDomains *domains,
   // without this, the page underneath shows through everywhere except
   // exactly where a child widget sits.
   setAttribute(Qt::WA_StyledBackground, true);
+  // Same as FindBar/DownloadBar: a child QWidget is visible by default, and
+  // an un-hidden overlay is a full-window blank location bar with the
+  // "search or url" placeholder. spawnForRequest() used to hit that -- it
+  // never called showGate(), and assumed that meant the gate was hidden.
+  hide();
 
   input_ = new QLineEdit(this);
   input_->setAttribute(Qt::WA_MacShowFocusRect, false);
