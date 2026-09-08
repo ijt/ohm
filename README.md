@@ -64,8 +64,9 @@ fine as a browser, that one view just won't open. `./shinto install` will:
 - enable `shinto.service` so the daemon is warm after login
 - rebind `Super + Shift + Return` to Shinto and `Super + Shift + Y` to YouTube in Shinto
 - tag Shinto windows like other Chromium-family browsers
+- ask (once, on first install) whether to make Shinto the default for links and `Super + Shift + B`
 
-`Super + Shift + B` and `xdg-open` stay on Chromium unless you opt in with `shinto default`.
+You can also opt in later with `shinto default`.
 
 ```bash
 ./shinto uninstall   # data is left in ~/.local/share/shinto
@@ -163,4 +164,4 @@ It's real Lua, so either setting can be computed however you like (env vars via 
 
 - Dedicated QtWebEngine profile at `~/.local/share/shinto/profile/webengine` — your main Chromium logins are untouched.
 - `Ctrl+T` opens a new empty page in the same Hyprland group as this window (and makes a group if there isn't one yet). `Ctrl+N` opens a new empty window of its own. `Ctrl+L` edits the address in this window, whole address selected. Escape goes back. On the empty gate, Ctrl+L is a no-op.
-- `Super + Shift + B` stays Omarchy's default-browser launcher (`omarchy-launch-browser` / XDG) until you run `shinto default` or `omarchy default browser shinto`.
+- `Super + Shift + B` stays Omarchy's default-browser launcher (`omarchy-launch-browser` / XDG) until you say yes at install time, or run `shinto default` / `omarchy default browser shinto`.

@@ -137,6 +137,54 @@ install_default() {
   env -u BROWSER xdg-settings set default-web-browser shinto.desktop
 }
 
+is_default_browser() {
+  [[ $(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null) == shinto.desktop ]]
+}
+
+# Prompt on stdout; read from /dev/tty so this still works when stdin is a
+# pipe (`curl | bash` → install.sh → ./shinto install). `read -p` writes
+# the prompt to stderr, and we don't want a missing /dev/tty to dump a
+# bash error, so the read itself is allowed to fail.
+#
+# $1 = prompt, $2 = default if the reply is empty (y or n).
+# Returns 0 for yes, 1 for no / no tty.
+ask_tty() {
+  local prompt=$1
+  local default=${2:-n}
+  local reply
+  printf '%s' "$prompt"
+  if ! read -r reply </dev/tty 2>/dev/null; then
+    echo
+    return 1
+  fi
+  [[ -z $reply ]] && reply=$default
+  case "$reply" in
+    [yY]*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Ask on first install only -- re-running this to pick up an update
+# shouldn't nag someone who already said no. No controlling terminal
+# (CI, etc.) is treated as no.
+maybe_install_default() {
+  local first_install=$1
+  if is_default_browser; then
+    echo "Shinto is already the default browser."
+    return
+  fi
+  if [[ $first_install -eq 0 ]]; then
+    echo "Super+Shift+B / xdg-open stay on the XDG default. Run \`shinto default\` to change that."
+    return
+  fi
+  if ask_tty "May I make Shinto your default browser? (links and Super+Shift+B) [y/N] " n; then
+    install_default
+    echo "Thank you — Shinto is now the default browser."
+  else
+    echo "No worries. Super+Shift+B and links stay as they are. You can run \`shinto default\` later."
+  fi
+}
+
 restore_default() {
   local file=$HOME/.config/mimeapps.list
   if [[ -f $file ]]; then
@@ -233,6 +281,8 @@ install_theme_hook() {
 
 do_install() {
   require_bin
+  local first_install=1
+  [[ -e $HOME/.local/bin/shinto ]] && first_install=0
   install_path
   install_downloads_tui
   install_desktop
@@ -240,7 +290,8 @@ do_install() {
   install_systemd
   install_theme_hook
   echo "Shinto installed."
-  echo "Super+Shift+Return opens Shinto. Super+Shift+B / xdg-open stay on the XDG default."
+  maybe_install_default "$first_install"
+  echo "Super+Shift+Return opens Shinto."
   echo "Hyprland groups (the tabs): Super+G, Super+Ctrl+Left/Right, Super+Alt+1-4."
 }
 
