@@ -25,7 +25,7 @@ Usage: shinto [command] [url]
   shinto daemon      Run the persistent Qt/QtWebEngine daemon (systemd)
   shinto install     Bind Super+Shift+Return, autostart daemon
   shinto uninstall   Restore the Chromium keybind, stop daemon
-  shinto start|stop|status
+  shinto start|stop|restart|status
   shinto theme       Refresh overlay colors from the Omarchy theme
   shinto default     Make Shinto the XDG / Omarchy default browser
   shinto --version   Print version
@@ -352,6 +352,32 @@ case $cmd in
     ;;
   stop)
     systemctl --user stop shinto.service
+    ;;
+  restart)
+    # The warm daemon is systemd's shinto.service, which execs the
+    # install-tree wrapper (~/.local/share/shinto/src/shinto daemon), not
+    # necessarily this checkout. Copy this tree's freshly built binary
+    # over that one (no-op if they're the same file), then bounce the
+    # unit so the running process is the new build.
+    require_bin
+    systemctl --user stop shinto.service 2>/dev/null || true
+    pkill -x shinto-bin 2>/dev/null || true
+    sleep 0.2
+    if pgrep -x shinto-bin >/dev/null; then
+      pkill -9 -x shinto-bin || true
+      sleep 0.2
+    fi
+    daemon_wrapper=$(systemctl --user cat shinto.service 2>/dev/null |
+      awk '/^ExecStart=/ { sub(/^ExecStart=/, ""); print $1; exit }')
+    if [[ -n $daemon_wrapper ]]; then
+      daemon_bin="$(dirname "$(readlink -f "$daemon_wrapper")")/app/build/shinto-bin"
+      src=$(readlink -f "$BIN")
+      if [[ $src != "$(readlink -f "$daemon_bin" 2>/dev/null || true)" ]]; then
+        mkdir -p "$(dirname "$daemon_bin")"
+        cp -f "$src" "$daemon_bin"
+      fi
+    fi
+    systemctl --user start shinto.service
     ;;
   status)
     systemctl --user status shinto.service --no-pager || true
