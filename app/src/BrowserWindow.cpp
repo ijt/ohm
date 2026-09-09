@@ -1,5 +1,7 @@
 #include "BrowserWindow.h"
 
+#include <QApplication>
+#include <QFocusEvent>
 #include <QKeyEvent>
 #include <QPrintDialog>
 #include <QPrinter>
@@ -37,7 +39,20 @@ bool isShintoShortcut(const QKeyEvent *ke, const QKeySequence &backShortcut) {
   if (!backShortcut.isEmpty() && QKeySequence(ke->keyCombination()) == backShortcut) {
     return true;
   }
-  if (ke->modifiers() != Qt::ControlModifier) return false;
+  // Ignore KeypadModifier so Ctrl+numpad +/- still match; Shift is only
+  // accepted for zoom-in (Ctrl+Shift+= is Key_Plus on most layouts).
+  const Qt::KeyboardModifiers mods =
+      ke->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
+  if (mods == (Qt::ControlModifier | Qt::ShiftModifier)) {
+    switch (ke->key()) {
+      case Qt::Key_Equal:
+      case Qt::Key_Plus:
+        return true;
+      default:
+        return false;
+    }
+  }
+  if (mods != Qt::ControlModifier) return false;
   switch (ke->key()) {
     case Qt::Key_T:
     case Qt::Key_N:
@@ -48,10 +63,57 @@ bool isShintoShortcut(const QKeyEvent *ke, const QKeySequence &backShortcut) {
     case Qt::Key_J:
     case Qt::Key_P:
     case Qt::Key_R:
+    case Qt::Key_Equal:
+    case Qt::Key_Minus:
+    case Qt::Key_Plus:
       return true;
     default:
       return false;
   }
+}
+
+// Chromium's own page-zoom presets. Stepping through these, rather than
+// adding a fixed 0.1, matches what Ctrl+=/- does in Chrome -- including
+// the same min/max.
+constexpr qreal kZoomFactors[] = {0.25, 0.333, 0.5,  0.666, 0.75, 0.8, 0.9, 1.0,
+                                  1.1,  1.25,  1.5,  1.75,  2.0,  2.5, 3.0, 4.0,
+                                  5.0};
+constexpr int kZoomFactorCount = static_cast<int>(sizeof(kZoomFactors) / sizeof(kZoomFactors[0]));
+constexpr qreal kZoomEpsilon = 0.001;
+
+void stepZoom(QWebEngineView *view, int direction) {
+  const qreal current = view->zoomFactor();
+  if (direction > 0) {
+    for (qreal z : kZoomFactors) {
+      if (z > current + kZoomEpsilon) {
+        view->setZoomFactor(z);
+        return;
+      }
+    }
+    view->setZoomFactor(kZoomFactors[kZoomFactorCount - 1]);
+  } else {
+    for (int i = kZoomFactorCount - 1; i >= 0; --i) {
+      if (kZoomFactors[i] < current - kZoomEpsilon) {
+        view->setZoomFactor(kZoomFactors[i]);
+        return;
+      }
+    }
+    view->setZoomFactor(kZoomFactors[0]);
+  }
+}
+
+// QtWebEngine's handleFocusEvent calls Chromium SetInitialFocus (first
+// focusable node -- often a top-left logo <img> inside an <a>) whenever
+// a FocusIn arrives with TabFocusReason / BacktabFocusReason. Qt uses
+// those reasons for things that are not the user pressing Tab: first
+// widget in a newly-shown window (activateWindow -> focusNextPrevChild),
+// and hiding a focused sibling (the omnibox gate). Track a real Tab so
+// those synthetic cases can be rewritten to OtherFocusReason; a genuine
+// Tab still highlights, which is the accessibility path we want to keep.
+bool tabKeyIsDown = false;
+
+void givePageFocus(QWebEngineView *view) {
+  view->setFocus(Qt::OtherFocusReason);
 }
 
 // QWebEnginePage's default javaScriptConsoleMessage() prints every page's
@@ -75,7 +137,7 @@ class WebPage : public QWebEnginePage {
 // our QShortcuts (Chromium's own input handling marks ShortcutOverride
 // events accepted for many keys, which tells Qt not to fire the shortcut).
 // Intercepting ShortcutOverride here, before it reaches the base class,
-// guarantees Ctrl+T/N/L/K/W always reach BrowserWindow's shortcuts even
+// guarantees Ctrl+T/N/L/K/W/=/- always reach BrowserWindow's shortcuts even
 // when a page has focus -- there is no JS-level race to lose, unlike the
 // old content-script approach.
 class WebView : public QWebEngineView {
@@ -84,6 +146,7 @@ class WebView : public QWebEngineView {
                     QWidget *parent = nullptr)
       : QWebEngineView(parent), backShortcut_(backShortcut) {
     setPage(new WebPage(profile, this));
+    ensureFocusRewriteFilter();
   }
 
  protected:
@@ -99,6 +162,42 @@ class WebView : public QWebEngineView {
   }
 
  private:
+  // FocusIn lands on the internal focus proxy, not this widget, so the
+  // rewrite has to be an app-wide filter that walks to a WebView parent.
+  static void ensureFocusRewriteFilter() {
+    struct Filter : QObject {
+      bool eventFilter(QObject *obj, QEvent *e) override {
+        if (e->type() == QEvent::KeyPress || e->type() == QEvent::KeyRelease) {
+          const auto *k = static_cast<QKeyEvent *>(e);
+          if (k->key() == Qt::Key_Tab || k->key() == Qt::Key_Backtab)
+            tabKeyIsDown = e->type() == QEvent::KeyPress;
+          return false;
+        }
+        if (e->type() != QEvent::FocusIn || tabKeyIsDown) return false;
+        auto *fe = static_cast<QFocusEvent *>(e);
+        if (fe->reason() != Qt::TabFocusReason && fe->reason() != Qt::BacktabFocusReason) {
+          return false;
+        }
+        for (QWidget *w = qobject_cast<QWidget *>(obj); w; w = w->parentWidget()) {
+          // WebView has no Q_OBJECT, so qobject_cast<WebView*> is always
+          // null; every QWebEngineView in this process is one of ours.
+          if (qobject_cast<QWebEngineView *>(w)) {
+            QFocusEvent rewritten(QEvent::FocusIn, Qt::OtherFocusReason);
+            QCoreApplication::sendEvent(obj, &rewritten);
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+    static Filter filter;
+    static bool installed = false;
+    if (!installed) {
+      qApp->installEventFilter(&filter);
+      installed = true;
+    }
+  }
+
   QKeySequence backShortcut_;
 };
 
@@ -149,8 +248,8 @@ BrowserWindow *BrowserWindow::spawnForRequest(QWebEngineProfile *profile, Histor
       win->webView_->page(), &QWebEnginePage::loadFinished, win,
       [win](bool) {
         win->state_ = State::Loaded;
+        givePageFocus(win->webView_);
         win->overlay_->hideOverlay();
-        win->webView_->setFocus();
       },
       Qt::SingleShotConnection);
   // openIn() must be called before this handler returns, or Qt rejects
@@ -214,7 +313,7 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
           [this] { doFind(findBar_->searchText(), /*backward=*/true); });
   connect(findBar_, &FindBar::closed, this, [this] {
     webView_->page()->findText(QString());
-    webView_->setFocus();
+    givePageFocus(webView_);
   });
 
   // A guarded record on urlChanged/titleChanged (rather than only in
@@ -339,6 +438,11 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   // handler so the downloads list stays reachable even when nothing is
   // currently active and the bar isn't showing.
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_J), &BrowserWindow::launchDownloadsTui);
+  // Ctrl+= is the unshifted plus key on US-layout; Ctrl++ is the same key
+  // with Shift (and the numpad plus). Both zoom in, matching Chrome.
+  addShortcut(QKeySequence(Qt::CTRL | Qt::Key_Equal), &BrowserWindow::onZoomInShortcut);
+  addShortcut(QKeySequence(Qt::CTRL | Qt::Key_Plus), &BrowserWindow::onZoomInShortcut);
+  addShortcut(QKeySequence(Qt::CTRL | Qt::Key_Minus), &BrowserWindow::onZoomOutShortcut);
 
   if (url.isEmpty()) {
     if (showEmptyGate) {
@@ -455,8 +559,8 @@ void BrowserWindow::onOverlayNavigate(const QString &url, const QString &typedQu
       webView_->page(), &QWebEnginePage::loadFinished, this,
       [this](bool) {
         state_ = State::Loaded;
+        givePageFocus(webView_);
         overlay_->hideOverlay();
-        webView_->setFocus();
       },
       Qt::SingleShotConnection);
   webView_->setUrl(QUrl(url));
@@ -466,8 +570,8 @@ void BrowserWindow::onOverlayCancelled() {
   // A no-op on the empty gate: there is nothing loaded to go back to.
   if (state_ != State::Gate) return;
   state_ = State::Loaded;
+  givePageFocus(webView_);
   overlay_->hideOverlay();
-  webView_->setFocus();
 }
 
 void BrowserWindow::onNewPageShortcut() {
@@ -527,6 +631,10 @@ void BrowserWindow::onReloadShortcut() {
   if (state_ != State::Loaded) return;
   webView_->reload();
 }
+
+void BrowserWindow::onZoomInShortcut() { stepZoom(webView_, 1); }
+
+void BrowserWindow::onZoomOutShortcut() { stepZoom(webView_, -1); }
 
 void BrowserWindow::onPrintRequested() {
   // Meaningless while the gate is up -- same as find/reload. Also a no-op

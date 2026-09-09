@@ -109,6 +109,8 @@ class BrowserWindow : public QMainWindow {
   void onBackShortcut();
   void onFindShortcut();
   void onReloadShortcut();
+  void onZoomInShortcut();
+  void onZoomOutShortcut();
   // PDF-viewer print button and window.print() both arrive as
   // QWebEnginePage::printRequested -- QtWebEngine does not show a print
   // dialog on its own. Ctrl+P uses the same path.

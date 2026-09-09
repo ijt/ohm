@@ -124,6 +124,7 @@ Browser (inside a Shinto window):
 | `Alt + Left` | Back (configurable, see [Configuration](#configuration)) |
 | `Ctrl + F` | Find in page. Enter/Shift+Enter or the ↓/↑ buttons step through matches, Escape closes it. |
 | `Ctrl + R` | Reload the page |
+| `Ctrl + =` / `Ctrl + -` | Zoom in / zoom out |
 | `Ctrl + J` | Open the downloads view (`shinto-downloads`, a terminal UI) -- also opens by clicking the bottom progress bar shown while a download is active |
 | `Ctrl + W` / `Super + Q` | Close this page |
 
