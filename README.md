@@ -57,8 +57,9 @@ cd downloads-tui && go build -o shinto-downloads . && cd ..
 
 The `go build` is for the downloads view (`shinto-downloads`, a separate
 Go/Bubble Tea binary -- see [`downloads-tui/`](downloads-tui/)) opened by
-Ctrl+J or clicking the bottom progress bar; skip it and Shinto still works
-fine as a browser, that one view just won't open. `./shinto install` will:
+clicking the bottom progress bar (or the "Download started" notification);
+skip it and Shinto still works fine as a browser, that one view just won't
+open. `./shinto install` will:
 
 - symlink `~/.local/bin/shinto` (and `~/.local/bin/shinto-downloads`, if built)
 - enable `shinto.service` so the daemon is warm after login
@@ -125,7 +126,6 @@ Browser (inside a Shinto window):
 | `Ctrl + F` | Find in page. Enter/Shift+Enter or the ↓/↑ buttons step through matches, Escape closes it. |
 | `Ctrl + R` | Reload the page |
 | `Ctrl + =` / `Ctrl + -` | Zoom in / zoom out |
-| `Ctrl + J` | Open the downloads view (`shinto-downloads`, a terminal UI) -- also opens by clicking the bottom progress bar shown while a download is active |
 | `Ctrl + W` / `Super + Q` | Close this page |
 
 Hyprland groups (these are the tabs):

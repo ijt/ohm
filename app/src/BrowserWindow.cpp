@@ -60,7 +60,6 @@ bool isShintoShortcut(const QKeyEvent *ke, const QKeySequence &backShortcut) {
     case Qt::Key_K:
     case Qt::Key_W:
     case Qt::Key_F:
-    case Qt::Key_J:
     case Qt::Key_P:
     case Qt::Key_R:
     case Qt::Key_Equal:
@@ -433,11 +432,6 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), &BrowserWindow::onFindShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_R), &BrowserWindow::onReloadShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_P), &BrowserWindow::onPrintRequested);
-  // The conventional browser "show downloads" binding (Chrome/Firefox),
-  // unused in Shinto otherwise -- independent of downloadBar_'s click
-  // handler so the downloads list stays reachable even when nothing is
-  // currently active and the bar isn't showing.
-  addShortcut(QKeySequence(Qt::CTRL | Qt::Key_J), &BrowserWindow::launchDownloadsTui);
   // Ctrl+= is the unshifted plus key on US-layout; Ctrl++ is the same key
   // with Shift (and the numpad plus). Both zoom in, matching Chrome.
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_Equal), &BrowserWindow::onZoomInShortcut);

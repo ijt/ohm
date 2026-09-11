@@ -9,9 +9,10 @@ set -euo pipefail
 SCRIPT_PATH=$(readlink -f "${BASH_SOURCE[0]}")
 SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 BIN="$SCRIPT_DIR/app/build/shinto-bin"
-# The downloads view (Ctrl+J / the bottom progress bar) is a separate Go
-# binary (see downloads-tui/) -- BrowserWindow.cpp finds it on PATH by
-# bare name, so it needs its own symlink into ~/.local/bin, same as $BIN.
+# The downloads view (the bottom progress bar / "Download started"
+# notification) is a separate Go binary (see downloads-tui/) --
+# BrowserWindow.cpp finds it on PATH by bare name, so it needs its own
+# symlink into ~/.local/bin, same as $BIN.
 DOWNLOADS_TUI_BIN="$SCRIPT_DIR/downloads-tui/shinto-downloads"
 
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/shinto"
@@ -266,9 +267,10 @@ install_downloads_tui() {
     ln -sfn "$DOWNLOADS_TUI_BIN" "$HOME/.local/bin/shinto-downloads"
   else
     # Not fatal -- downloads still work without this, there's just no
-    # Ctrl+J/bottom-bar view for them until Go is available.
-    echo "shinto: $DOWNLOADS_TUI_BIN not built -- the downloads view (Ctrl+J," >&2
-    echo "  or clicking the bottom progress bar) won't work until you run:" >&2
+    # bottom-bar / notification-click view for them until Go is available.
+    echo "shinto: $DOWNLOADS_TUI_BIN not built -- the downloads view" >&2
+    echo "  (clicking the bottom progress bar or the download notification)" >&2
+    echo "  won't work until you run:" >&2
     echo "    cd $SCRIPT_DIR/downloads-tui && go build -o shinto-downloads ." >&2
     echo "  then re-run: $SCRIPT_PATH install" >&2
   fi
