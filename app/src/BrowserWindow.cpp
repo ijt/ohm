@@ -599,15 +599,13 @@ void BrowserWindow::onBackShortcut() {
   // but actually going back would land on a blank page, not a previous
   // one. A window opened directly with a URL (a CLI `shinto <url>`, an
   // OAuth popup) has no about:blank at all, so canGoBack() is simply
-  // false there. Either way, "no real page to go back to" opens the gate
-  // instead (same as Ctrl+L) -- landing on blank, or doing nothing
-  // silently, are both worse than that.
+  // false there. Either way, there's no real page to go back to, so just
+  // do nothing -- popping open the location gate on a plain Alt+Left felt
+  // surprising in practice.
   const bool atFirstRealPage = hist->currentItemIndex() == 1 &&
                                 hist->itemAt(0).url() == QUrl(QStringLiteral("about:blank"));
   if (hist->canGoBack() && !atFirstRealPage) {
     webView_->back();
-  } else {
-    showGateOverPage();
   }
 }
 
