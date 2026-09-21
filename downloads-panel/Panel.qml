@@ -126,8 +126,16 @@ Item {
       Item {
         id: cardWrap
         anchors.centerIn: parent
-        width: Math.min(Style.space(460), keyCatcher.width - Style.space(48))
-        height: Math.min(Style.space(560), keyCatcher.height - Style.space(48))
+        // Hugs the content's natural height (hero + separator + rows, or the
+        // empty-state text) up to a cap, instead of always claiming the full
+        // maximum -- a single download no longer leaves a big empty card.
+        readonly property real maxWidth: Style.space(460)
+        readonly property real maxHeight: Style.space(560)
+        readonly property real minHeight: Style.space(160)
+        width: Math.min(cardWrap.maxWidth, keyCatcher.width - Style.space(48))
+        height: Math.min(
+          Math.min(cardWrap.maxHeight, keyCatcher.height - Style.space(48)),
+          Math.max(cardWrap.minHeight, contentColumn.implicitHeight + card.contentTopInset + card.contentBottomInset))
 
         // Swallow clicks so only the scrim outside the card dismisses.
         MouseArea { anchors.fill: parent; onClicked: {} }
@@ -140,68 +148,72 @@ Item {
           padding: Style.space(16)
           borderSpec: Border.localOrSurfaceSpec("popups", "border", Color.popups.border, Color.popups.border, Math.max(1, Style.space(2)))
 
-          ColumnLayout {
+          // One Flickable for the whole card (hero included), not just the
+          // row list -- same idiom as the Dropbox panel -- so the card can
+          // size itself to contentColumn.implicitHeight below the cap and
+          // only scroll once real overflow happens above it.
+          Flickable {
+            id: cardFlick
             anchors.fill: parent
             anchors.topMargin: card.contentTopInset
             anchors.rightMargin: card.contentRightInset
             anchors.bottomMargin: card.contentBottomInset
             anchors.leftMargin: card.contentLeftInset
-            spacing: Style.space(12)
+            contentWidth: width
+            contentHeight: contentColumn.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
-            PanelHero {
-              id: hero
-              Layout.fillWidth: true
-              title: "Downloads"
-              meta: root.activeCount > 0 ? root.activeCount + " active" : ""
-              foreground: Color.foreground
-              fontFamily: root.fontFamily
-              iconComponent: Component {
-                Text {
-                  textFormat: Text.PlainText
-                  text: "⤓" // ⤓
-                  color: Color.foreground
-                  font.pixelSize: Style.font.display
+            Column {
+              id: contentColumn
+              width: cardFlick.width
+              spacing: Style.space(12)
+
+              PanelHero {
+                id: hero
+                width: parent.width
+                title: "Downloads"
+                meta: root.activeCount > 0 ? root.activeCount + " active" : ""
+                foreground: Color.foreground
+                fontFamily: root.fontFamily
+                iconComponent: Component {
+                  Text {
+                    textFormat: Text.PlainText
+                    text: "⤓" // ⤓
+                    color: Color.foreground
+                    font.pixelSize: Style.font.display
+                  }
+                }
+                trailingControl: Component {
+                  PanelActionButton {
+                    iconText: "⊘" // ⊘ -- "clear finished"
+                    tooltipText: "Clear finished"
+                    foreground: Color.foreground
+                    fontFamily: root.fontFamily
+                    onClicked: downloadsSvc.clearFinished()
+                  }
                 }
               }
-              trailingControl: Component {
-                PanelActionButton {
-                  iconText: "⊘" // ⊘ -- "clear finished"
-                  tooltipText: "Clear finished"
-                  foreground: Color.foreground
-                  fontFamily: root.fontFamily
-                  onClicked: downloadsSvc.clearFinished()
-                }
+
+              PanelSeparator { foreground: Color.foreground }
+
+              Text {
+                textFormat: Text.PlainText
+                visible: downloadsSvc.downloads.length === 0
+                width: parent.width
+                topPadding: Style.space(24)
+                text: "No downloads yet"
+                color: Qt.darker(Color.foreground, 1.4)
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+                horizontalAlignment: Text.AlignHCenter
               }
-            }
-
-            PanelSeparator { Layout.fillWidth: true; foreground: Color.foreground }
-
-            Text {
-              textFormat: Text.PlainText
-              visible: downloadsSvc.downloads.length === 0
-              Layout.fillWidth: true
-              Layout.topMargin: Style.space(24)
-              text: "No downloads yet"
-              color: Qt.darker(Color.foreground, 1.4)
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.body
-              horizontalAlignment: Text.AlignHCenter
-            }
-
-            Flickable {
-              id: listFlick
-              visible: downloadsSvc.downloads.length > 0
-              Layout.fillWidth: true
-              Layout.fillHeight: true
-              contentWidth: width
-              contentHeight: rowColumn.implicitHeight
-              clip: true
-              boundsBehavior: Flickable.StopAtBounds
-              ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
               Column {
                 id: rowColumn
-                width: listFlick.width
+                visible: downloadsSvc.downloads.length > 0
+                width: parent.width
                 spacing: Style.space(6)
 
                 Repeater {
