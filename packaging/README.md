@@ -10,7 +10,7 @@
 | `shinto-git.install` | Post-install hint to enable the daemon |
 | `shinto/PKGBUILD` | Versioned `shinto` recipe for GitHub Releases |
 
-`cmake --install` (with `-DCMAKE_INSTALL_PREFIX=/usr`) installs the binary, desktop file, icon, generated unit, and `shinto-downloads` if that Go binary has already been built.
+`cmake --install` (with `-DCMAKE_INSTALL_PREFIX=/usr`) installs the binary, desktop file, icon, and generated unit. Each `PKGBUILD`'s own `package()` step separately stages `hypr.lua`, `theme-set-hook.sh`, and the `downloads-panel/` Quickshell plugin under `/usr/share/shinto/`.
 
 ## GitHub Release package
 

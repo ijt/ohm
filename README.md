@@ -51,17 +51,16 @@ git clone https://github.com/ijt/shinto.git
 cd shinto
 cmake -S app -B app/build
 cmake --build app/build
-cd downloads-tui && go build -o shinto-downloads . && cd ..
 ./shinto install
 ```
 
-The `go build` is for the downloads view (`shinto-downloads`, a separate
-Go/Bubble Tea binary -- see [`downloads-tui/`](downloads-tui/)) opened by
-clicking the bottom progress bar (or the "Download started" notification);
-skip it and Shinto still works fine as a browser, that one view just won't
-open. `./shinto install` will:
+`./shinto install` will:
 
-- symlink `~/.local/bin/shinto` (and `~/.local/bin/shinto-downloads`, if built)
+- symlink `~/.local/bin/shinto`
+- install the downloads view -- an Omarchy Quickshell panel (see
+  [`downloads-panel/`](downloads-panel/)) opened by clicking the bottom
+  progress bar (or the "Download started" notification) -- into
+  `~/.config/omarchy/plugins/shinto-downloads` and enable it
 - enable `shinto.service` so the daemon is warm after login
 - rebind `Super + Shift + Return` to Shinto and `Super + Shift + Y` to YouTube in Shinto
 - tag Shinto windows like other Chromium-family browsers
@@ -103,15 +102,16 @@ omarchy default browser shinto
 
 ```
 /usr/bin/shinto
-/usr/bin/shinto-downloads
 /usr/share/applications/shinto.desktop
 /usr/share/icons/hicolor/128x128/apps/shinto.png
+/usr/share/shinto/downloads-panel/
 /usr/lib/systemd/user/shinto.service
 ```
 
-`shinto-downloads` is included in the GitHub/AUR packages (and in
-`cmake --install` if you built it first). `./shinto install` also
-symlinks it for a from-source install.
+The downloads panel at `/usr/share/shinto/downloads-panel/` is only staged
+there by packaged installs, same as `hypr.lua` -- `./shinto install`
+(source-tree only) is what actually copies a plugin into
+`~/.config/omarchy/plugins/` and enables it with Quickshell.
 
 ## Keys
 
