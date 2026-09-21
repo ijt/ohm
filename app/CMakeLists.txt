@@ -25,7 +25,7 @@ qt_add_executable(shinto-bin
   src/Notify.cpp
   src/DownloadManager.cpp
   src/DownloadBar.cpp
-  src/DownloadsTuiLauncher.cpp
+  src/DownloadsPanelLauncher.cpp
   src/WebProfile.cpp
   src/ThemeLoader.cpp
   src/Config.cpp
@@ -60,12 +60,6 @@ include(GNUInstallDirs)
 install(PROGRAMS $<TARGET_FILE:shinto-bin>
   DESTINATION ${CMAKE_INSTALL_BINDIR}
   RENAME shinto)
-
-# Built separately (see downloads-tui/); skip quietly if it isn't there yet
-# so a C++-only cmake --install still works.
-install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/../downloads-tui/shinto-downloads"
-  DESTINATION ${CMAKE_INSTALL_BINDIR}
-  OPTIONAL)
 
 set(_shinto_packaging_dir "${CMAKE_CURRENT_SOURCE_DIR}/../packaging")
 install(FILES "${_shinto_packaging_dir}/shinto.desktop"

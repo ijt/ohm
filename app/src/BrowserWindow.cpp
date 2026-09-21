@@ -21,7 +21,7 @@
 
 #include "DownloadBar.h"
 #include "DownloadManager.h"
-#include "DownloadsTuiLauncher.h"
+#include "DownloadsPanelLauncher.h"
 #include "FindBar.h"
 #include "Hyprland.h"
 #include "OmniboxOverlay.h"
@@ -287,7 +287,7 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
 
   downloadBar_ = new DownloadBar(container);
   downloadBar_->applyPalette(currentPalette_);
-  connect(downloadBar_, &DownloadBar::clicked, this, &BrowserWindow::launchDownloadsTui);
+  connect(downloadBar_, &DownloadBar::clicked, this, &BrowserWindow::showDownloadsPanel);
   connect(downloads_, &DownloadManager::downloadAdded, this, [this](int) { refreshDownloadBar(); });
   connect(downloads_, &DownloadManager::downloadProgress, this,
           [this](int, qint64, qint64) { refreshDownloadBar(); });
@@ -511,7 +511,7 @@ void BrowserWindow::refreshDownloadBar() {
   }
 }
 
-void BrowserWindow::launchDownloadsTui() { launchOrSkipDownloadsTui(); }
+void BrowserWindow::showDownloadsPanel() { shinto::showDownloadsPanel(); }
 
 void BrowserWindow::enterEmpty(bool showGate) {
   state_ = State::Empty;

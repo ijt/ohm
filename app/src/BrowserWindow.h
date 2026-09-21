@@ -93,10 +93,10 @@ class BrowserWindow : public QMainWindow {
   // content to downloads_->latestActive()) -- connected to all three
   // DownloadManager signals, so it doesn't matter which one fired.
   void refreshDownloadBar();
-  // Runs `shinto-downloads` (a standalone Go/Bubble Tea TUI, see
-  // downloads-tui/) in a fresh terminal -- it reads DownloadManager's own
-  // downloads.sqlite directly, no IPC with this process needed.
-  void launchDownloadsTui();
+  // Toggles the "Shinto Downloads" Quickshell panel (see downloads-panel/)
+  // -- it reads DownloadManager's own downloads.sqlite directly, no IPC
+  // with this process needed.
+  void showDownloadsPanel();
   void enterEmpty(bool showGate);
   void showGateOverPage();
   void onOverlayNavigate(const QString &url, const QString &typedQuery);

@@ -27,11 +27,12 @@ class SingletonServer : public QObject {
   void openRequested(const QString &url);
   // "THEME" -> re-read colors.toml and re-apply to every open window.
   void themeReloadRequested();
-  // "CANCEL_DOWNLOAD <id>" -- shinto-downloads (downloads-tui/) sends this
-  // directly over this same socket (a raw AF_UNIX connection, no Qt on
-  // that end) since cancelling a live QWebEngineDownloadRequest can only
-  // happen in this process; the TUI otherwise only ever reads
-  // downloads.sqlite, no other IPC with the daemon.
+  // "CANCEL_DOWNLOAD <id>" -- the downloads panel's helper script
+  // (downloads-panel/downloads_helper.py) sends this directly over this
+  // same socket (a raw AF_UNIX connection, no Qt on that end) since
+  // cancelling a live QWebEngineDownloadRequest can only happen in this
+  // process; the panel otherwise only ever reads downloads.sqlite, no
+  // other IPC with the daemon.
   void cancelDownloadRequested(int id);
 
  private:

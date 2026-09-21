@@ -15,7 +15,7 @@
 #include <QTimer>
 #include <QWebEngineDownloadRequest>
 
-#include "DownloadsTuiLauncher.h"
+#include "DownloadsPanelLauncher.h"
 #include "Notify.h"
 #include "Shinto.h"
 
@@ -83,18 +83,19 @@ bool DownloadManager::open() {
     return false;
   }
   QSqlQuery q(db_);
-  // WAL instead of the default rollback-journal mode: shinto-downloads
-  // (downloads-tui/, a separate process) opens a fresh read connection to
-  // this same file roughly twice a second. Under the default mode, a
-  // writer holds an exclusive lock for the (brief) duration of each
-  // write, and a reader that lands in that window gets SQLITE_BUSY
-  // immediately -- confirmed as the cause of a real "flickers between
-  // the list and 'No downloads yet'" bug, since the TUI's own read path
-  // silently treated that error as "zero rows" (see its db.go). WAL lets
-  // readers proceed against the last-committed snapshot instead of
-  // blocking on an in-progress writer, which is exactly the read/write
-  // mix here (this process is the only writer; downloads-tui is a
-  // read-mostly, occasional-write-via-socket-not-SQL guest).
+  // WAL instead of the default rollback-journal mode: the downloads panel's
+  // helper script (downloads-panel/downloads_helper.py, a separate process)
+  // opens a fresh read connection to this same file roughly twice a second.
+  // Under the default mode, a writer holds an exclusive lock for the
+  // (brief) duration of each write, and a reader that lands in that window
+  // gets SQLITE_BUSY immediately -- confirmed as the cause of a real
+  // "flickers between the list and 'No downloads yet'" bug in the old
+  // downloads-tui Go TUI this replaced, since its read path silently
+  // treated that error as "zero rows". WAL lets readers proceed against
+  // the last-committed snapshot instead of blocking on an in-progress
+  // writer, which is exactly the read/write mix here (this process is the
+  // only writer; the panel's helper is a read-mostly,
+  // occasional-write-via-socket-not-SQL guest).
   q.exec(QStringLiteral("PRAGMA journal_mode=WAL"));
   q.exec(QStringLiteral(
       "CREATE TABLE IF NOT EXISTS downloads ("
@@ -232,17 +233,17 @@ void DownloadManager::track(QWebEngineDownloadRequest *download) {
   live_[id] = download;
   emit downloadAdded(id);
 
-  notifyClickable(QStringLiteral("Download started"), candidate, [] { launchOrSkipDownloadsTui(); });
+  notifyClickable(QStringLiteral("Download started"), candidate, [] { showDownloadsPanel(); });
 
   // Emitted signal throttled to ~4/sec -- receivedBytesChanged fires far
   // more often than any in-process UI needs to redraw. The SQLite write is
-  // throttled separately and much more coarsely (~1/sec): downloads-tui/
-  // (a whole separate process, unlike an in-process signal listener) has
-  // no way to see progress *except* through this file, so it can't be
+  // throttled separately and much more coarsely (~1/sec): the downloads
+  // panel (a whole separate process, unlike an in-process signal listener)
+  // has no way to see progress *except* through this file, so it can't be
   // skipped the way the original "in-memory only" version did here --
-  // confirmed concretely: the TUI's bar sat frozen at its initial 0%
-  // until the download finished, since nothing ever wrote a byte count to
-  // disk before that.
+  // confirmed concretely with the old downloads-tui Go TUI this replaced:
+  // its bar sat frozen at its initial 0% until the download finished,
+  // since nothing ever wrote a byte count to disk before that.
   auto lastEmitMs = std::make_shared<qint64>(0);
   auto lastPersistMs = std::make_shared<qint64>(0);
   connect(download, &QWebEngineDownloadRequest::receivedBytesChanged, this,

@@ -23,10 +23,11 @@ class DownloadManager : public QObject {
 
  public:
   // Persisted to SQLite as this declaration order's plain int (see
-  // persist()/open()) -- downloads-tui/ (a separate Go binary reading
-  // the same downloads.sqlite directly, no shared header) mirrors these
-  // exact ordinals in its own enum. Reordering/inserting a variant here
-  // silently breaks that reader; append new states at the end only.
+  // persist()/open()) -- downloads-panel/downloads_helper.py (a separate
+  // Python script reading the same downloads.sqlite directly, no shared
+  // header) mirrors these exact ordinals in its own constants. Reordering/
+  // inserting a variant here silently breaks that reader; append new states
+  // at the end only.
   enum class State { InProgress, Completed, Interrupted, Cancelled };
 
   struct DownloadRecord {
@@ -72,7 +73,8 @@ class DownloadManager : public QObject {
   // Cancels the still-InProgress download with this id, if any (a no-op,
   // not an error, if it already finished or `id` is unknown) -- deletes
   // its partial file too. The only caller today is SingletonServer's
-  // "CANCEL_DOWNLOAD <id>" command, sent by downloads-tui/'s action popup.
+  // "CANCEL_DOWNLOAD <id>" command, sent by the downloads panel's cancel
+  // button (see downloads-panel/downloads_helper.py's cmd_cancel).
   void cancel(int id);
 
   // The most recently *started* still-InProgress download -- for the
