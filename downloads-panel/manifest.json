@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "shinto.downloads",
+  "name": "Shinto Downloads",
+  "version": "1.0.0",
+  "author": "Shinto",
+  "license": "MIT",
+  "description": "Shinto's downloads list: progress, open file, show in folder, cancel. Summon with: omarchy-shell shell toggle shinto.downloads",
+  "kinds": [
+    "panel"
+  ],
+  "entryPoints": {
+    "panel": "Panel.qml"
+  }
+}
