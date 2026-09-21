@@ -21,13 +21,13 @@ fi
 SHINTO_SRC="${SHINTO_SRC:-$HOME/.local/share/shinto/src}"
 REPO_URL="${SHINTO_REPO_URL:-https://github.com/ijt/shinto.git}"
 
-# Arch/Omarchy package names for everything CMakeLists.txt and
-# downloads-tui/go.mod need at build time -- see packaging/PKGBUILD's own
-# depends/makedepends for the subset of this that a packaged install
-# still needs at runtime. base-devel brings the C++ compiler (Qt itself
-# doesn't); no ninja -- this uses the same plain default-generator `cmake
-# -S/-B` + `cmake --build` the README's own "From source" steps do.
-PACMAN_PKGS=(git cmake base-devel qt6-base qt6-webengine lua54 go)
+# Arch/Omarchy package names for everything CMakeLists.txt needs at build
+# time -- see packaging/PKGBUILD's own depends/makedepends for the subset of
+# this that a packaged install still needs at runtime. base-devel brings the
+# C++ compiler (Qt itself doesn't); no ninja -- this uses the same plain
+# default-generator `cmake -S/-B` + `cmake --build` the README's own "From
+# source" steps do.
+PACMAN_PKGS=(git cmake base-devel qt6-base qt6-webengine lua54)
 
 if command -v pacman >/dev/null 2>&1; then
   missing=()
@@ -87,9 +87,6 @@ cmake -S "$SHINTO_SRC/app" -B "$SHINTO_SRC/app/build" -DCMAKE_BUILD_TYPE=Release
 # this whole script -- plain `cmake --build` doesn't parallelize on the
 # default Makefiles generator without being told to.
 cmake --build "$SHINTO_SRC/app/build" --parallel "$(nproc)"
-
-echo "install.sh: building the downloads view (shinto-downloads)"
-(cd "$SHINTO_SRC/downloads-tui" && go build -o shinto-downloads .)
 
 echo "install.sh: running ./shinto install"
 "$SHINTO_SRC/shinto" install

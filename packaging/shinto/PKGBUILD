@@ -10,7 +10,7 @@ arch=('x86_64')
 url="https://github.com/ijt/shinto"
 license=('MIT')
 depends=('qt6-base' 'qt6-webengine' 'lua54')
-makedepends=('git' 'cmake' 'go')
+makedepends=('git' 'cmake')
 conflicts=('shinto-git')
 install=shinto.install
 options=('!debug')
@@ -29,7 +29,6 @@ build() {
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr
   cmake --build build --parallel "$(nproc)"
-  (cd "$pkgname-$pkgver/downloads-tui" && go build -o shinto-downloads .)
 }
 
 package() {
@@ -37,4 +36,8 @@ package() {
   install -Dm644 "$pkgname-$pkgver/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 "$pkgname-$pkgver/hypr.lua" "$pkgdir/usr/share/shinto/hypr.lua"
   install -Dm755 "$pkgname-$pkgver/theme-set-hook.sh" "$pkgdir/usr/share/shinto/theme-set-hook.sh"
+  # Omarchy Quickshell panel for the downloads view (see downloads-panel/);
+  # same "for source-style installs" caveat as hypr.lua above -- only
+  # `shinto install` (source-tree) actually registers it with Quickshell.
+  cp -r "$pkgname-$pkgver/downloads-panel" "$pkgdir/usr/share/shinto/downloads-panel"
 }

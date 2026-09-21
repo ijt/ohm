@@ -10,13 +10,14 @@ SCRIPT_PATH=$(readlink -f "${BASH_SOURCE[0]}")
 SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 BIN="$SCRIPT_DIR/app/build/shinto-bin"
 # The downloads view (the bottom progress bar / "Download started"
-# notification) is a separate Go binary (see downloads-tui/) --
-# BrowserWindow.cpp finds it on PATH by bare name, so it needs its own
-# symlink into ~/.local/bin, same as $BIN.
-DOWNLOADS_TUI_BIN="$SCRIPT_DIR/downloads-tui/shinto-downloads"
+# notification) is an Omarchy Quickshell panel (see downloads-panel/), not a
+# binary -- it has to be copied into Omarchy's third-party plugin directory
+# for Quickshell to discover it, rather than symlinked into ~/.local/bin.
+DOWNLOADS_PANEL_SRC="$SCRIPT_DIR/downloads-panel"
 
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/shinto"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+DOWNLOADS_PANEL_DEST="$CONFIG_HOME/omarchy/plugins/shinto-downloads"
 
 usage() {
   cat <<'EOF'
@@ -262,17 +263,29 @@ install_path() {
   ln -sfn "$SCRIPT_PATH" "$HOME/.local/bin/shinto"
 }
 
-install_downloads_tui() {
-  if [[ -x $DOWNLOADS_TUI_BIN ]]; then
-    ln -sfn "$DOWNLOADS_TUI_BIN" "$HOME/.local/bin/shinto-downloads"
-  else
-    # Not fatal -- downloads still work without this, there's just no
-    # bottom-bar / notification-click view for them until Go is available.
-    echo "shinto: $DOWNLOADS_TUI_BIN not built -- the downloads view" >&2
-    echo "  (clicking the bottom progress bar or the download notification)" >&2
-    echo "  won't work until you run:" >&2
-    echo "    cd $SCRIPT_DIR/downloads-tui && go build -o shinto-downloads ." >&2
-    echo "  then re-run: $SCRIPT_PATH install" >&2
+install_downloads_panel() {
+  if [[ ! -d $DOWNLOADS_PANEL_SRC ]]; then
+    echo "shinto: $DOWNLOADS_PANEL_SRC not found -- skipping the downloads panel" >&2
+    return
+  fi
+  mkdir -p "$(dirname "$DOWNLOADS_PANEL_DEST")"
+  rm -rf "$DOWNLOADS_PANEL_DEST"
+  cp -r "$DOWNLOADS_PANEL_SRC" "$DOWNLOADS_PANEL_DEST"
+  # Not fatal -- downloads still persist to the database without this, there's
+  # just no bottom-bar / notification-click view for them until Quickshell
+  # picks the plugin up (e.g. no Omarchy shell running yet).
+  if command -v omarchy-shell >/dev/null 2>&1; then
+    omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+  fi
+  if command -v omarchy-plugin-enable >/dev/null 2>&1; then
+    omarchy-plugin-enable shinto.downloads >/dev/null 2>&1 || true
+  fi
+}
+
+uninstall_downloads_panel() {
+  rm -rf "$DOWNLOADS_PANEL_DEST"
+  if command -v omarchy-shell >/dev/null 2>&1; then
+    omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
   fi
 }
 
@@ -287,7 +300,7 @@ do_install() {
   local first_install=1
   [[ -e $HOME/.local/bin/shinto ]] && first_install=0
   install_path
-  install_downloads_tui
+  install_downloads_panel
   install_desktop
   install_hypr
   install_systemd
@@ -302,7 +315,7 @@ do_uninstall() {
   systemctl --user disable --now shinto.service 2>/dev/null || true
   rm -f "$CONFIG_HOME/systemd/user/shinto.service"
   rm -f "$HOME/.local/bin/shinto"
-  rm -f "$HOME/.local/bin/shinto-downloads"
+  uninstall_downloads_panel
   rm -f "$HOME/.local/share/applications/shinto.desktop"
   rm -f "$CONFIG_HOME/hypr/shinto.lua"
   if [[ -f $CONFIG_HOME/hypr/hyprland.lua ]]; then
