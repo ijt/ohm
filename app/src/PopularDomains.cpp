@@ -58,7 +58,16 @@ PopularDomains::PopularDomains() {
 QVector<PopularDomains::Suggestion> PopularDomains::complete(const QString &prefix,
                                                               int limit) const {
   QVector<Suggestion> out;
-  const QString p = prefix.trimmed().toLower();
+  // Same scheme/www stripping as HistoryStore::completeVisited -- typing
+  // "https://git" should complete like "git", not look for a domain that
+  // literally starts with "https://".
+  static const QRegularExpression kScheme(
+      QStringLiteral("^[a-zA-Z][a-zA-Z0-9+.-]*://"));
+  static const QRegularExpression kWww(
+      QStringLiteral("^www\\."), QRegularExpression::CaseInsensitiveOption);
+  QString p = prefix.trimmed().toLower();
+  p.remove(kScheme);
+  p.remove(kWww);
   if (p.size() < 2 || domains_.isEmpty()) return out;
 
   // [lo, hi) is the contiguous range of domains starting with `p` --

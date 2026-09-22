@@ -14,7 +14,7 @@ class HistoryStore : public QObject {
 
  public:
   struct Suggestion {
-    QString label;  // url with the scheme (and "www.") stripped for display
+    QString label;  // https:// (and a leading www.) stripped; other schemes kept
     QString url;
     // How many times this URL has been visited. Lets a caller (see
     // OmniboxOverlay's blended ranking against PopularDomains) weigh how
@@ -43,9 +43,12 @@ class HistoryStore : public QObject {
   // baked-in popularity list. A visit that came from an omnibox search
   // shows as the query text itself ("weather today"), not the search
   // engine's own URL ("duckduckgo.com/?q=weather+today") -- recovered via
-  // a join against `typed` (see recordTyped()). A prefix shorter than 2
-  // characters returns nothing, matching PopularDomains::complete()'s
-  // threshold.
+  // a join against `typed` (see recordTyped()). A typed URL uses the same
+  // https-stripped label as any other visit, so "https://github.com" and
+  // "github.com" don't appear as two different-looking rows. A leading
+  // scheme on `prefix` is ignored ("https://git" completes like "git").
+  // A prefix shorter than 2 characters returns nothing, matching
+  // PopularDomains::complete()'s threshold.
   QVector<Suggestion> completeVisited(const QString &prefix, int limit) const;
 
   // Removes one URL from visited history -- the omnibox suggestion

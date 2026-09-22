@@ -26,7 +26,8 @@ class PopularDomains {
   // (~100k short strings) to do synchronously at daemon startup.
   PopularDomains();
 
-  // Prefix match against the domain list (case-insensitive), ranked by
+  // Prefix match against the domain list (case-insensitive; a leading
+  // scheme and "www." on the prefix are ignored), ranked by
   // popularity (source-list order) among matches, not alphabetically. A
   // prefix shorter than 2 characters returns nothing -- consistent with
   // the old typed/history completion's threshold, and avoids single-letter

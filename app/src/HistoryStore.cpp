@@ -13,23 +13,69 @@ namespace shinto {
 
 namespace {
 
-// Mirrors PopularDomains::Suggestion's bare-domain label, but a visited URL
-// can carry a path -- strip the scheme and a leading "www." and keep the
-// rest, e.g. "https://www.github.com/ijt/shinto" -> "github.com/ijt/shinto".
+// Hide the default scheme so suggestion rows don't flicker between
+// "https://github.com" (typed with a scheme, or Ctrl+L then Enter) and
+// "github.com" (PopularDomains, or a visit with no typed query). https is
+// implied; other schemes stay visible so http:// / file:// don't look like
+// ordinary sites. A leading "www." is stripped either way, matching
+// PopularDomains' bare-domain labels. A path is kept, e.g.
+// "https://www.github.com/ijt/shinto" -> "github.com/ijt/shinto".
 QString displayLabel(const QString &url) {
-  static const QRegularExpression kSchemeAndWww(
-      QStringLiteral("^[a-zA-Z][a-zA-Z0-9+.-]*://(www\\.)?"));
+  static const QRegularExpression kHttps(
+      QStringLiteral("^https://"), QRegularExpression::CaseInsensitiveOption);
+  static const QRegularExpression kWww(
+      QStringLiteral("^((?:[a-zA-Z][a-zA-Z0-9+.-]*://)?)www\\."),
+      QRegularExpression::CaseInsensitiveOption);
   QString label = url;
-  label.remove(kSchemeAndWww);
+  label.remove(kHttps);
+  label.replace(kWww, QStringLiteral("\\1"));
   // A bare root path adds nothing over the domain alone, and otherwise
   // duplicates -- to the eye, if not by exact string -- PopularDomains'
   // own bare-domain suggestion for the same site (e.g. history's
   // "rubyonrails.org/" next to the domain list's "rubyonrails.org"). Only
-  // the root: a real path keeps its trailing slash if it had one.
-  if (label.endsWith(QLatin1Char('/')) && label.count(QLatin1Char('/')) == 1) {
+  // the root: a real path keeps its trailing slash if it had one. Measured
+  // on the host+path so a kept scheme's slashes ("http://example.com/")
+  // don't block the chop.
+  const int schemeSep = label.indexOf(QStringLiteral("://"));
+  const QString hostAndPath =
+      schemeSep >= 0 ? label.mid(schemeSep + 3) : label;
+  if (hostAndPath.endsWith(QLatin1Char('/')) &&
+      hostAndPath.count(QLatin1Char('/')) == 1) {
     label.chop(1);
   }
   return label;
+}
+
+// Inverse of the URL cases in HistoryStore::toUrl -- a typed query that
+// was itself a URL should display as displayLabel(landed url), not the raw
+// typed string (which may still have "https://"). Search queries
+// ("weather today") stay as typed.
+bool looksLikeUrl(const QString &q) {
+  static const QRegularExpression kScheme(QStringLiteral("^[a-zA-Z][a-zA-Z0-9+.-]*:"));
+  static const QRegularExpression kLocalhost(
+      QStringLiteral("^localhost(:\\d+)?(/|$)"), QRegularExpression::CaseInsensitiveOption);
+  static const QRegularExpression kIpv4(
+      QStringLiteral("^(\\d{1,3}\\.){3}\\d{1,3}(:\\d+)?(/|$)"));
+  static const QRegularExpression kBareDomain(QStringLiteral("^\\S+\\.\\S+$"));
+  if (kScheme.match(q).hasMatch()) return true;
+  if (q.startsWith(QStringLiteral("//"))) return true;
+  if (kLocalhost.match(q).hasMatch()) return true;
+  if (kIpv4.match(q).hasMatch()) return true;
+  if (kBareDomain.match(q).hasMatch() && !q.contains(QLatin1Char(' '))) return true;
+  return false;
+}
+
+// Typing "https://git" should complete like "git" -- the scheme is default
+// noise, not part of the domain prefix the LIKE clauses match against.
+QString completionPrefix(const QString &prefix) {
+  static const QRegularExpression kScheme(
+      QStringLiteral("^[a-zA-Z][a-zA-Z0-9+.-]*://"));
+  static const QRegularExpression kWww(
+      QStringLiteral("^www\\."), QRegularExpression::CaseInsensitiveOption);
+  QString p = prefix.trimmed();
+  p.remove(kScheme);
+  p.remove(kWww);
+  return p;
 }
 
 // Escapes a LIKE pattern's own wildcard characters so the user's prefix is
@@ -108,7 +154,7 @@ void HistoryStore::recordVisit(const QString &url, const QString &title) {
 QVector<HistoryStore::Suggestion> HistoryStore::completeVisited(const QString &prefix,
                                                                   int limit) const {
   QVector<Suggestion> out;
-  const QString p = prefix.trimmed();
+  const QString p = completionPrefix(prefix);
   if (p.size() < 2) return out;
 
   const QString escaped = escapeLike(p);
@@ -149,7 +195,13 @@ QVector<HistoryStore::Suggestion> HistoryStore::completeVisited(const QString &p
     // visits, so this is the exception, not the rule.
     const QString typedQuery = query.value(1).toString();
     const int visitCount = query.value(2).toInt();
-    out.push_back({typedQuery.isEmpty() ? displayLabel(url) : typedQuery, url, visitCount});
+    // Search queries stay human-readable ("weather today"). A typed URL,
+    // with or without https://, uses the same scheme-stripped label as a
+    // visit that never went through the omnibox.
+    const QString label =
+        (!typedQuery.isEmpty() && !looksLikeUrl(typedQuery)) ? typedQuery
+                                                            : displayLabel(url);
+    out.push_back({label, url, visitCount});
   }
   return out;
 }
