@@ -3,7 +3,7 @@
 # The rolling AUR recipe is packaging/PKGBUILD (`shinto-git`).
 
 pkgname=shinto
-pkgver=0.0.2
+pkgver=0.0.3
 pkgrel=1
 pkgdesc="Page viewer for Omarchy — one window, one page; Hyprland is the tab bar"
 arch=('x86_64' 'aarch64')
