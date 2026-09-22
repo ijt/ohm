@@ -159,12 +159,12 @@ QVector<HistoryStore::Suggestion> HistoryStore::completeVisited(const QString &p
 
   const QString escaped = escapeLike(p);
   QSqlQuery query(db_);
-  // A prefix match against the host (with or without a leading "www.",
-  // over both schemes) covers the common case of typing a domain; the
-  // title substring match covers recalling a page by what it's about
-  // rather than its URL; the LEFT JOIN against `typed` (matched on t.q
-  // too) covers recalling a past *search* by the words you searched for.
-  // visit_count DESC is the "weighted by frequency of use" ranking;
+  // Prefix match against the URL (host, with or without a leading "www.",
+  // over both schemes). Title / typed-query text is not searched -- those
+  // would need their own flow that actually shows the title, otherwise
+  // "git" hits archive.org because its title contains "Digital". The
+  // LEFT JOIN against `typed` is only for the display label of a search
+  // visit. visit_count DESC is the "weighted by frequency of use" ranking;
   // last_visit DESC breaks ties toward what's recent.
   query.prepare(QStringLiteral(
       "SELECT v.url, t.q, v.visit_count FROM visited v"
@@ -173,15 +173,11 @@ QVector<HistoryStore::Suggestion> HistoryStore::completeVisited(const QString &p
       "    OR v.url LIKE 'https://' || :p2 || '%' ESCAPE '\\'"
       "    OR v.url LIKE 'http://www.' || :p3 || '%' ESCAPE '\\'"
       "    OR v.url LIKE 'https://www.' || :p4 || '%' ESCAPE '\\'"
-      "    OR v.title LIKE '%' || :p5 || '%' ESCAPE '\\'"
-      "    OR t.q LIKE '%' || :p6 || '%' ESCAPE '\\'"
       " ORDER BY v.visit_count DESC, v.last_visit DESC LIMIT :limit"));
   query.bindValue(":p1", escaped);
   query.bindValue(":p2", escaped);
   query.bindValue(":p3", escaped);
   query.bindValue(":p4", escaped);
-  query.bindValue(":p5", escaped);
-  query.bindValue(":p6", escaped);
   query.bindValue(":limit", limit);
   if (!query.exec()) {
     qWarning() << "shinto: completeVisited failed:" << query.lastError().text();
