@@ -158,6 +158,7 @@ void OmniboxOverlay::showGate(const QString &prefill) {
   clearSuggestions();
   progress_ = 0;
   progressBar_->hide();
+  awaitingLoad_ = false;
   stopShimmer();
   stopSpinner();
   hintEnabled_ = prefill.isEmpty();
@@ -190,6 +191,7 @@ void OmniboxOverlay::showLoading(const QString &url) {
 
 void OmniboxOverlay::hideOverlay() {
   clearSuggestions();
+  awaitingLoad_ = false;
   stopShimmer();
   stopSpinner();
   hintEnabled_ = false;
@@ -198,6 +200,12 @@ void OmniboxOverlay::hideOverlay() {
 }
 
 void OmniboxOverlay::setProgress(int percent) {
+  // loadProgress is connected for the window's whole lifetime -- ignore it
+  // unless this overlay is actually waiting on a navigation. Otherwise the
+  // empty gate's about:blank (and stray ticks on Ctrl+L) start the spinner
+  // and nothing ever stops it, since hideOverlay() never runs on the idle
+  // search/url screen.
+  if (!awaitingLoad_) return;
   progress_ = qBound(0, percent, 100);
   // Real progress data has arrived -- the bar takes over from the URL
   // shimmer, and the spinner stays until hideOverlay() because Chromium
@@ -211,6 +219,7 @@ void OmniboxOverlay::setProgress(int percent) {
 }
 
 void OmniboxOverlay::startShimmer() {
+  awaitingLoad_ = true;
   inputOpacity_->setOpacity(1.0);
   shimmer_->start();
 }

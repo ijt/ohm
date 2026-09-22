@@ -151,6 +151,11 @@ class OmniboxOverlay : public QWidget {
   bool hintEnabled_ = false;
   QGraphicsOpacityEffect *inputOpacity_;
   QPropertyAnimation *shimmer_;
+  // True between startShimmer() (overlay submit / showLoading) and the
+  // gate going idle (showGate / hideOverlay). setProgress() no-ops unless
+  // this is set, so about:blank on the empty gate can't leave the spinner
+  // running forever.
+  bool awaitingLoad_ = false;
   int progress_ = 0;
   QVector<Suggestion> items_;
 };
