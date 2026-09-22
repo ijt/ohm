@@ -1,0 +1,80 @@
+# Arch packages for GitHub Releases. Fires only on a pushed v* tag --
+# ordinary pushes to main do not build Qt or produce a .pkg.tar.zst.
+#
+#   git tag -a v0.0.3 -m "Shinto 0.0.3"
+#   git push origin v0.0.3
+#
+# Each arch builds in a native runner (no qemu). x86_64 uses the official
+# Arch image; aarch64 uses lopsided/archlinux because docker.io/archlinux
+# is amd64-only. Packages are attached to the GitHub Release for that tag
+# (created with generated notes if it doesn't exist yet).
+name: Release packages
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            image: archlinux:base-devel
+            arch: x86_64
+          - runs-on: ubuntu-24.04-arm
+            image: lopsided/archlinux:latest
+            arch: aarch64
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.arch }} package
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          docker run --rm \
+            -e TAG \
+            -v "$PWD":/src \
+            -w /src \
+            ${{ matrix.image }} \
+            bash /src/.github/scripts/build-release-pkg.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.arch }}
+          path: packaging/shinto/shinto-*.pkg.tar.*
+          if-no-files-found: error
+
+  release:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pkg-*
+          merge-multiple: true
+          path: dist
+      - name: Attach packages to the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          shopt -s nullglob
+          files=(dist/*)
+          if ((${#files[@]} == 0)); then
+            echo "no packages to upload" >&2
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" --generate-notes --verify-tag
+          fi

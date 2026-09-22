@@ -10,11 +10,11 @@
 | `shinto-git.install` | Post-install hint to enable the daemon |
 | `shinto/PKGBUILD` | Versioned `shinto` recipe for GitHub Releases |
 
-`cmake --install` (with `-DCMAKE_INSTALL_PREFIX=/usr`) installs the binary, desktop file, icon, and generated unit. Each `PKGBUILD`'s own `package()` step separately stages `hypr.lua`, `theme-set-hook.sh`, and the `downloads-panel/` Quickshell plugin under `/usr/share/shinto/`.
+`cmake --install` (with `-DCMAKE_INSTALL_PREFIX=/usr`) installs the binary, desktop file, icon, and generated unit. Each `PKGBUILD`'s own `package()` step separately stages `hypr.lua`, `theme-set-hook.sh`, and the Quickshell panels (`downloads-panel/`, `shortcuts-panel/`) under `/usr/share/shinto/`.
 
 ## GitHub Release package
 
-Tagged releases attach a `shinto-<ver>-<rel>-x86_64.pkg.tar.zst` built from `shinto/PKGBUILD`. Install with:
+Pushing a `v*` tag runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which builds `x86_64` and `aarch64` packages and attaches them to the GitHub Release. Branch pushes do not. Install with:
 
 ```bash
 sudo pacman -U shinto-*-x86_64.pkg.tar.zst
