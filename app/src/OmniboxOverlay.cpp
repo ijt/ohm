@@ -121,10 +121,6 @@ OmniboxOverlay::OmniboxOverlay(HistoryStore *history, PopularDomains *domains,
   progressBar_->setObjectName(QStringLiteral("ProgressBar"));
   progressBar_->hide();
   spinner_ = new Spinner(this);
-  hint_ = new QLabel(QStringLiteral("Ctrl+? shortcuts"), this);
-  hint_->setObjectName(QStringLiteral("ShortcutsHint"));
-  hint_->setAlignment(Qt::AlignCenter);
-  hint_->hide();
   // No QLayout -- position is managed by hand in layoutInput().
 
   // Loading a real page has some inherent latency (DNS, connect, TLS)
@@ -161,7 +157,6 @@ void OmniboxOverlay::showGate(const QString &prefill) {
   awaitingLoad_ = false;
   stopShimmer();
   stopSpinner();
-  hintEnabled_ = prefill.isEmpty();
   layoutInput();
   show();
   raise();
@@ -181,7 +176,6 @@ void OmniboxOverlay::showLoading(const QString &url) {
   progress_ = 0;
   progressBar_->hide();
   stopSpinner();
-  hintEnabled_ = false;
   layoutInput();
   show();
   raise();
@@ -194,8 +188,6 @@ void OmniboxOverlay::hideOverlay() {
   awaitingLoad_ = false;
   stopShimmer();
   stopSpinner();
-  hintEnabled_ = false;
-  hint_->hide();
   hide();
 }
 
@@ -270,12 +262,6 @@ void OmniboxOverlay::layoutInput() {
   input_->setGeometry(kMargin, kMargin, inputW, h);
   list_->setGeometry(kMargin, kMargin + h + 4, w, suggestionListHeight());
   list_->setVisible(!items_.isEmpty());
-  const bool showHint = hintEnabled_ && items_.isEmpty();
-  hint_->setVisible(showHint);
-  if (showHint) {
-    const int hintH = hint_->sizeHint().height();
-    hint_->setGeometry(kMargin, height() - kMargin - hintH, w, hintH);
-  }
   layoutProgressBar();
 }
 

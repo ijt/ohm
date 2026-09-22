@@ -30,7 +30,6 @@
 #include "ThemeLoader.h"
 
 class QGraphicsOpacityEffect;
-class QLabel;
 class QLineEdit;
 class QListWidget;
 class QPropertyAnimation;
@@ -145,10 +144,6 @@ class OmniboxOverlay : public QWidget {
   QListWidget *list_;
   QWidget *progressBar_;
   Spinner *spinner_;
-  QLabel *hint_;
-  // Empty-gate only -- hidden for Ctrl+L / loading so it isn't chrome on
-  // an already-aimed window.
-  bool hintEnabled_ = false;
   QGraphicsOpacityEffect *inputOpacity_;
   QPropertyAnimation *shimmer_;
   // True between startShimmer() (overlay submit / showLoading) and the
