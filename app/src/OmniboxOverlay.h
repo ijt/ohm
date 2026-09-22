@@ -7,10 +7,11 @@
 // window has (maxSuggestionRows()), blending two sources into one ranked
 // list rather than showing one before the other (updateSuggestions()): the
 // user's own visited history (HistoryStore::completeVisited()) and offline
-// domain-prefix suggestions (PopularDomains) -- a page you've actually used
-// usually wins, but a strong domain match can still outrank a history entry
-// you've only visited once or twice. Nothing typed ever leaves the machine
-// to power either. Rows fade toward the background
+// domain-prefix suggestions (PopularDomains). Shallower URLs sort first
+// (github.com before github.com/foo/bar); among the same path depth, a page
+// you've actually used usually wins, but a strong domain match can still
+// outrank a history entry you've only visited once or twice. Nothing typed
+// ever leaves the machine to power either. Rows fade toward the background
 // color going down the list (renderSuggestions()) so a long list reads as
 // "the top few matter most", not a wall of equally-loud text. Every row
 // has a per-row "x" button to dismiss it -- permanently, from HistoryStore
@@ -29,6 +30,7 @@
 #include "ThemeLoader.h"
 
 class QGraphicsOpacityEffect;
+class QLabel;
 class QLineEdit;
 class QListWidget;
 class QPropertyAnimation;
@@ -143,6 +145,10 @@ class OmniboxOverlay : public QWidget {
   QListWidget *list_;
   QWidget *progressBar_;
   Spinner *spinner_;
+  QLabel *hint_;
+  // Empty-gate only -- hidden for Ctrl+L / loading so it isn't chrome on
+  // an already-aimed window.
+  bool hintEnabled_ = false;
   QGraphicsOpacityEffect *inputOpacity_;
   QPropertyAnimation *shimmer_;
   int progress_ = 0;

@@ -164,8 +164,9 @@ QVector<HistoryStore::Suggestion> HistoryStore::completeVisited(const QString &p
   // would need their own flow that actually shows the title, otherwise
   // "git" hits archive.org because its title contains "Digital". The
   // LEFT JOIN against `typed` is only for the display label of a search
-  // visit. visit_count DESC is the "weighted by frequency of use" ranking;
-  // last_visit DESC breaks ties toward what's recent.
+  // visit. Shallower URLs first (github.com before github.com/foo) so a
+  // heavily-used deep path doesn't crowd the root out of LIMIT; then
+  // visit_count DESC, last_visit DESC.
   query.prepare(QStringLiteral(
       "SELECT v.url, t.q, v.visit_count FROM visited v"
       " LEFT JOIN typed t ON t.url = v.url"
@@ -173,7 +174,8 @@ QVector<HistoryStore::Suggestion> HistoryStore::completeVisited(const QString &p
       "    OR v.url LIKE 'https://' || :p2 || '%' ESCAPE '\\'"
       "    OR v.url LIKE 'http://www.' || :p3 || '%' ESCAPE '\\'"
       "    OR v.url LIKE 'https://www.' || :p4 || '%' ESCAPE '\\'"
-      " ORDER BY v.visit_count DESC, v.last_visit DESC LIMIT :limit"));
+      " ORDER BY (LENGTH(v.url) - LENGTH(REPLACE(v.url, '/', ''))) ASC,"
+      "          v.visit_count DESC, v.last_visit DESC LIMIT :limit"));
   query.bindValue(":p1", escaped);
   query.bindValue(":p2", escaped);
   query.bindValue(":p3", escaped);

@@ -121,6 +121,10 @@ OmniboxOverlay::OmniboxOverlay(HistoryStore *history, PopularDomains *domains,
   progressBar_->setObjectName(QStringLiteral("ProgressBar"));
   progressBar_->hide();
   spinner_ = new Spinner(this);
+  hint_ = new QLabel(QStringLiteral("Ctrl+? shortcuts"), this);
+  hint_->setObjectName(QStringLiteral("ShortcutsHint"));
+  hint_->setAlignment(Qt::AlignCenter);
+  hint_->hide();
   // No QLayout -- position is managed by hand in layoutInput().
 
   // Loading a real page has some inherent latency (DNS, connect, TLS)
@@ -156,6 +160,7 @@ void OmniboxOverlay::showGate(const QString &prefill) {
   progressBar_->hide();
   stopShimmer();
   stopSpinner();
+  hintEnabled_ = prefill.isEmpty();
   layoutInput();
   show();
   raise();
@@ -175,6 +180,7 @@ void OmniboxOverlay::showLoading(const QString &url) {
   progress_ = 0;
   progressBar_->hide();
   stopSpinner();
+  hintEnabled_ = false;
   layoutInput();
   show();
   raise();
@@ -186,6 +192,8 @@ void OmniboxOverlay::hideOverlay() {
   clearSuggestions();
   stopShimmer();
   stopSpinner();
+  hintEnabled_ = false;
+  hint_->hide();
   hide();
 }
 
@@ -253,6 +261,12 @@ void OmniboxOverlay::layoutInput() {
   input_->setGeometry(kMargin, kMargin, inputW, h);
   list_->setGeometry(kMargin, kMargin + h + 4, w, suggestionListHeight());
   list_->setVisible(!items_.isEmpty());
+  const bool showHint = hintEnabled_ && items_.isEmpty();
+  hint_->setVisible(showHint);
+  if (showHint) {
+    const int hintH = hint_->sizeHint().height();
+    hint_->setGeometry(kMargin, height() - kMargin - hintH, w, hintH);
+  }
   layoutProgressBar();
 }
 
@@ -422,6 +436,15 @@ QColor blend(const QColor &from, const QColor &to, double t) {
   return QColor(lerp(from.red(), to.red()), lerp(from.green(), to.green()),
                 lerp(from.blue(), to.blue()));
 }
+
+// Path segments after the host -- github.com is 0, github.com/foo/bar is 2.
+// Scheme slashes don't count, so http://archive.org and https://github.com
+// compare as peers (both roots).
+int pathDepth(const QString &url) {
+  const int sep = url.indexOf(QLatin1String("://"));
+  const QString rest = sep >= 0 ? url.mid(sep + 3) : url;
+  return rest.count(QLatin1Char('/'));
+}
 }  // namespace
 
 void OmniboxOverlay::updateSuggestions() {
@@ -463,14 +486,15 @@ void OmniboxOverlay::updateSuggestions() {
     if (!labelKey.isEmpty()) seenLabels.insert(labelKey);
     candidates.push_back({{label, url, kind}, score});
   };
-  // A single blended ranking, not "history first, domains fill the rest":
-  // a page you've actually used should usually win, but a strong domain
-  // match can still outrank a history entry you've only visited once or
-  // twice. History score is visit_count itself, capped so one obsessively-
-  // visited page can't permanently bury every domain suggestion; domain
-  // score is scaled from its popularity rank so the single most popular
-  // domain in the list scores roughly like a page visited kDomainTopScore
-  // times -- competitive with a lightly-used history entry, not with a
+  // Prefixes first (github.com before github.com/foo/bar), then a blended
+  // score: a page you've actually used should usually win among peers at
+  // the same path depth, but a strong domain match can still outrank a
+  // history entry you've only visited once or twice. History score is
+  // visit_count itself, capped so one obsessively-visited page can't
+  // permanently bury every domain suggestion; domain score is scaled from
+  // its popularity rank so the single most popular domain in the list
+  // scores roughly like a page visited kDomainTopScore times --
+  // competitive with a lightly-used history entry, not with a
   // frequently-used one.
   constexpr int kHistoryScoreCap = 20;
   constexpr double kDomainTopScore = 5.0;
@@ -480,8 +504,13 @@ void OmniboxOverlay::updateSuggestions() {
   for (const auto &d : domains_->complete(text, maxTotal)) {
     tryAdd(d.label, d.url, SuggestionKind::Popular, kDomainTopScore / double(d.rank + 1));
   }
-  std::sort(candidates.begin(), candidates.end(),
-            [](const Scored &a, const Scored &b) { return a.score > b.score; });
+  std::sort(candidates.begin(), candidates.end(), [](const Scored &a, const Scored &b) {
+    const int da = pathDepth(a.s.url);
+    const int db = pathDepth(b.s.url);
+    if (da != db) return da < db;
+    if (a.score != b.score) return a.score > b.score;
+    return a.s.label.size() < b.s.label.size();
+  });
 
   QVector<Suggestion> combined;
   for (int i = 0; i < candidates.size() && i < maxTotal; ++i) {

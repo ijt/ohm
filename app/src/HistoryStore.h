@@ -37,8 +37,8 @@ class HistoryStore : public QObject {
   void recordVisit(const QString &url, const QString &title);
 
   // Visited URLs (each url is a SQLite PRIMARY KEY, so already unique)
-  // whose host matches `prefix`, ranked by visit_count (most frequently
-  // visited first) -- the omnibox's
+  // whose host matches `prefix`, shallower URLs first, then visit_count --
+  // the omnibox's
   // "you've been here before" suggestions, as opposed to PopularDomains'
   // baked-in popularity list. A visit that came from an omnibox search
   // shows as the query text itself ("weather today"), not the search
