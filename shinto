@@ -288,11 +288,29 @@ install_omarchy_panel() {
   cp -r "$src" "$dest"
   # Not fatal -- the panel is optional chrome; the rest of Shinto works
   # without Quickshell picking the plugin up (e.g. no Omarchy shell yet).
-  if command -v omarchy-shell >/dev/null 2>&1; then
-    omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+  if ! command -v omarchy-shell >/dev/null 2>&1 || ! command -v omarchy-plugin-enable >/dev/null 2>&1; then
+    return
   fi
-  if command -v omarchy-plugin-enable >/dev/null 2>&1; then
-    omarchy-plugin-enable "$plugin_id" >/dev/null 2>&1 || true
+  if ! omarchy-shell shell ping >/dev/null 2>&1; then
+    echo "shinto: Omarchy shell is not running; the $label panel was copied but not enabled" >&2
+    return
+  fi
+  # rescanPlugins returns before Quickshell finishes the scan (the reload is
+  # scheduled with Qt.callLater). Enabling in that window fails with "plugin
+  # is not known". Swallowing that left shinto.shortcuts disabled, so Ctrl+?
+  # summoned nothing.
+  omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+  local i
+  for i in $(seq 1 30); do
+    if omarchy-shell shell listPlugins 2>/dev/null |
+      jq -e --arg id "$plugin_id" 'any(.[]; .id == $id)' >/dev/null; then
+      break
+    fi
+    sleep 0.1
+  done
+  local err
+  if ! err=$(omarchy-plugin-enable "$plugin_id" 2>&1); then
+    echo "shinto: could not enable the $label panel ($plugin_id): ${err:-unknown error}" >&2
   fi
 }
 
