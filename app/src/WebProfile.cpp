@@ -49,94 +49,96 @@ void installScrollbarHidingScript(QWebEngineProfile *profile) {
   profile->scripts()->insert(script);
 }
 
-// QtWebEngine's WebAuthn support is incomplete in a way that hangs pages,
-// not just lacks features: PublicKeyCredential.getClientCapabilities()
-// (and the older isUserVerifyingPlatformAuthenticatorAvailable() /
-// isConditionalMediationAvailable() feature-detection calls) never settle
-// -- the promise neither resolves nor rejects, ever -- confirmed as a
-// standing QtWebEngine issue via another QtWebEngine-based browser
-// (qutebrowser #8930), not something specific to one site. A page that
-// awaits one of these before deciding whether to offer passkey/QR-code UI
-// or fall back to a password is left permanently stuck (reproduced
-// concretely: "Continue with Apple" on x.com hangs on a spinner forever
-// after submitting an email, and never offers its usual "sign in via
-// iPhone" option either -- both are this).
+// QtWebEngine's WebAuthn support hangs pages rather than just lacking
+// features. Two distinct hangs, both reproduced on x.com:
 //
-// Races each real call against a timeout rather than unconditionally
-// stubbing them out: if a native call actually resolves (fixed in a
-// future QtWebEngine, or a real platform authenticator answers), that
-// real answer wins; only a call that's actually hung falls back to "no
-// WebAuthn here" once the timeout elapses. This can't restore the
-// QR-code/hybrid-transport flow itself -- Qt's own docs for
-// QWebEngineWebAuthUxRequest list only user verification, resident
-// credentials, and failure UX as supported, nothing hybrid-transport-
-// shaped -- but it stops the hang, letting a site fall through to
-// password auth on its own instead of freezing.
+// 1. PublicKeyCredential.getClientCapabilities() (and the older
+//    isUserVerifyingPlatformAuthenticatorAvailable() /
+//    isConditionalMediationAvailable() probes) never settle. A page that
+//    awaits one before offering passkey vs password UI spins forever
+//    ("Continue with Apple" after submitting an email). Confirmed as
+//    QtWebEngine, not one site, via qutebrowser #8930.
 //
-// Unlike the scrollbar script above, this runs at DocumentCreation
-// (Chromium's document_start), not DocumentReady: it never touches the
-// DOM (only static methods on the PublicKeyCredential global, which
-// exists before any script runs regardless of parse state), so the
-// DocumentReady-only reasoning above doesn't apply -- and it has to be in
-// place before the page's own feature-detection call fires, which an
-// early <head> inline script or auth SDK may do well before
-// DocumentReady.
-void installWebAuthnCapabilityShim(QWebEngineProfile *profile) {
+// 2. Even when feature detection is answered, a site that already knows
+//    the account has a passkey (x.com after a username: "Sign in with
+//    passkey") calls navigator.credentials.get({publicKey}) and waits on
+//    that promise. Qt never shows the transport picker: its dialog
+//    controller only emits webAuthUxRequested once a PIN/account/touch
+//    step is pending, and hybrid/QR (the usual phone passkey) is not in
+//    QWebEngineWebAuthUxRequest at all. With no authenticator UI, the
+//    ceremony does not time out, and the page spinner never stops.
+//
+// A native "yes" from those probes is not usable here -- it just sends
+// the site into hang (2) -- so this does not race the real calls. Probes
+// resolve immediately to "no WebAuthn", and publicKey get/create reject
+// immediately with NotSupportedError (what Chromium reports when the API
+// is disabled), which sites treat as "fall back to a password" rather
+// than "the user cancelled". Password-manager credentials.get({password})
+// is left alone.
+//
+// DocumentCreation (Chromium document_start), not DocumentReady: this
+// never touches the DOM, and it has to be in place before an early
+// <head> inline script or auth SDK runs. A ceremony that still reaches
+// Qt is cancelled in BrowserWindow so it can't hang one layer deeper.
+void installWebAuthnShim(QWebEngineProfile *profile) {
   QWebEngineScript script;
-  script.setName(QStringLiteral("shinto-webauthn-capability-shim"));
+  script.setName(QStringLiteral("shinto-webauthn-shim"));
   script.setInjectionPoint(QWebEngineScript::DocumentCreation);
   script.setWorldId(QWebEngineScript::MainWorld);
   script.setRunsOnSubFrames(true);
   script.setSourceCode(QStringLiteral(R"JS(
 (function() {
-  if (typeof PublicKeyCredential === 'undefined') return;
-  var TIMEOUT_MS = 2500; // generous: "hangs forever" -> "waits 2.5s" is
-                          // still a huge win, and keeps the window for a
-                          // false early answer narrow.
-
-  function shim(name, fallbackValue) {
-    // These are STATIC methods on the class itself per the WebAuthn
-    // spec, not prototype methods.
-    if (typeof PublicKeyCredential[name] !== 'function') return; // absent on this build
-    var real = PublicKeyCredential[name].bind(PublicKeyCredential);
-    function patched() {
-      var args = arguments;
-      return new Promise(function(resolve) {
-        var settled = false;
-        var timer = setTimeout(function() {
-          if (settled) return;
-          settled = true;
-          resolve(fallbackValue);
-        }, TIMEOUT_MS);
-        var realPromise;
-        try { realPromise = real.apply(PublicKeyCredential, args); }
-        catch (e) {
-          if (!settled) { settled = true; clearTimeout(timer); resolve(fallbackValue); }
-          return;
-        }
-        realPromise.then(function(v) {
-          if (settled) return;
-          settled = true; clearTimeout(timer); resolve(v);
-        }, function() {
-          if (settled) return;
-          settled = true; clearTimeout(timer); resolve(fallbackValue);
-        });
-      });
-    }
-    try {
-      Object.defineProperty(PublicKeyCredential, name,
-        { value: patched, writable: true, configurable: true, enumerable: false });
-    } catch (e) { /* non-configurable on this build: leave native behavior alone */ }
+  function notSupported() {
+    return Promise.reject(new DOMException('WebAuthn is not available.', 'NotSupportedError'));
   }
 
-  shim('getClientCapabilities', {
-    conditionalCreate: false, conditionalGet: false, hybridTransport: false,
-    passkeyPlatformAuthenticator: false, userVerifyingPlatformAuthenticator: false,
-    relatedOrigins: false, signalAllAcceptedCredentials: false,
-    signalCurrentUserDetails: false, signalUnknownCredential: false
-  });
-  shim('isUserVerifyingPlatformAuthenticatorAvailable', false);
-  shim('isConditionalMediationAvailable', false);
+  function stub(obj, name, value) {
+    if (!obj || typeof obj[name] !== 'function' || obj[name].__shinto) return;
+    function patched() { return Promise.resolve(value); }
+    patched.__shinto = true;
+    try {
+      Object.defineProperty(obj, name,
+        { value: patched, writable: true, configurable: true, enumerable: false });
+    } catch (e) {
+      try { obj[name] = patched; } catch (e2) {}
+    }
+  }
+
+  // Static methods on the class itself, per the WebAuthn spec.
+  if (typeof PublicKeyCredential !== 'undefined') {
+    stub(PublicKeyCredential, 'getClientCapabilities', {
+      conditionalCreate: false, conditionalGet: false, hybridTransport: false,
+      passkeyPlatformAuthenticator: false, userVerifyingPlatformAuthenticator: false,
+      relatedOrigins: false, signalAllAcceptedCredentials: false,
+      signalCurrentUserDetails: false, signalUnknownCredential: false
+    });
+    stub(PublicKeyCredential, 'isUserVerifyingPlatformAuthenticatorAvailable', false);
+    stub(PublicKeyCredential, 'isConditionalMediationAvailable', false);
+  }
+
+  function rejectPublicKey(obj, name) {
+    if (!obj || typeof obj[name] !== 'function' || obj[name].__shinto) return;
+    var real = obj[name];
+    function patched(options) {
+      if (options && options.publicKey) return notSupported();
+      return real.apply(this, arguments);
+    }
+    patched.__shinto = true;
+    try {
+      Object.defineProperty(obj, name,
+        { value: patched, writable: true, configurable: true });
+    } catch (e) {
+      try { obj[name] = patched; } catch (e2) {}
+    }
+  }
+
+  var proto = (typeof CredentialsContainer !== 'undefined') ? CredentialsContainer.prototype : null;
+  rejectPublicKey(proto, 'get');
+  rejectPublicKey(proto, 'create');
+  if (navigator.credentials) {
+    rejectPublicKey(navigator.credentials, 'get');
+    rejectPublicKey(navigator.credentials, 'create');
+  }
 })();
 )JS"));
   profile->scripts()->insert(script);
@@ -182,7 +184,7 @@ QWebEngineProfile *createSharedProfile(QObject *parent, DownloadManager *downloa
   settings->setAttribute(QWebEngineSettings::FullScreenSupportEnabled, true);
 
   installScrollbarHidingScript(profile);
-  installWebAuthnCapabilityShim(profile);
+  installWebAuthnShim(profile);
   installDownloadHandler(profile, downloads);
 
   return profile;
