@@ -97,6 +97,8 @@ class BrowserWindow : public QMainWindow {
   // -- it reads DownloadManager's own downloads.sqlite directly, no IPC
   // with this process needed.
   void showDownloadsPanel();
+  // Toggles the shortcuts cheatsheet (see shortcuts-panel/). Ctrl+? / F1.
+  void showShortcutsPanel();
   void enterEmpty(bool showGate);
   void showGateOverPage();
   void onOverlayNavigate(const QString &url, const QString &typedQuery);

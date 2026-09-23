@@ -40,13 +40,17 @@ bool isShintoShortcut(const QKeyEvent *ke, const QKeySequence &backShortcut) {
     return true;
   }
   // Ignore KeypadModifier so Ctrl+numpad +/- still match; Shift is only
-  // accepted for zoom-in (Ctrl+Shift+= is Key_Plus on most layouts).
+  // accepted for zoom-in (Ctrl+Shift+= is Key_Plus on most layouts) and
+  // the shortcuts overlay (Ctrl+? is Ctrl+Shift+/ on a US layout).
   const Qt::KeyboardModifiers mods =
       ke->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
+  if (mods == Qt::NoModifier && ke->key() == Qt::Key_F1) return true;
   if (mods == (Qt::ControlModifier | Qt::ShiftModifier)) {
     switch (ke->key()) {
       case Qt::Key_Equal:
       case Qt::Key_Plus:
+      case Qt::Key_Slash:
+      case Qt::Key_Question:
         return true;
       default:
         return false;
@@ -65,6 +69,8 @@ bool isShintoShortcut(const QKeyEvent *ke, const QKeySequence &backShortcut) {
     case Qt::Key_Equal:
     case Qt::Key_Minus:
     case Qt::Key_Plus:
+    case Qt::Key_Slash:
+    case Qt::Key_Question:
       return true;
     default:
       return false;
@@ -236,7 +242,7 @@ BrowserWindow *BrowserWindow::spawnForRequest(QWebEngineProfile *profile, Histor
   const QUrl dest = request.requestedUrl();
   if (dest.isValid() && !dest.isEmpty() && dest != QUrl(QStringLiteral("about:blank"))) {
     // Same loading gate as a CLI `shinto <url>`: destination visible,
-    // shimmering, until the page paints. Empty requestedUrl (some OAuth
+    // with the spinner, until the page paints. Empty requestedUrl (some OAuth
     // popups) stays overlay-hidden -- openIn() still has a real
     // WebContents, just no URL string we could honestly show.
     win->overlay_->showLoading(dest.toString());
@@ -437,6 +443,11 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_Equal), &BrowserWindow::onZoomInShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_Plus), &BrowserWindow::onZoomInShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_Minus), &BrowserWindow::onZoomOutShortcut);
+  // Ctrl+? is Ctrl+Shift+/ on a US layout; bind the unshifted slash too.
+  addShortcut(QKeySequence(Qt::CTRL | Qt::Key_Question), &BrowserWindow::showShortcutsPanel);
+  addShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Slash), &BrowserWindow::showShortcutsPanel);
+  addShortcut(QKeySequence(Qt::CTRL | Qt::Key_Slash), &BrowserWindow::showShortcutsPanel);
+  addShortcut(QKeySequence(Qt::Key_F1), &BrowserWindow::showShortcutsPanel);
 
   if (url.isEmpty()) {
     if (showEmptyGate) {
@@ -513,6 +524,8 @@ void BrowserWindow::refreshDownloadBar() {
 
 void BrowserWindow::showDownloadsPanel() { shinto::showDownloadsPanel(); }
 
+void BrowserWindow::showShortcutsPanel() { shinto::showShortcutsPanel(); }
+
 void BrowserWindow::enterEmpty(bool showGate) {
   state_ = State::Empty;
   setWindowTitle(QStringLiteral("Shinto"));
@@ -541,9 +554,9 @@ void BrowserWindow::onOverlayNavigate(const QString &url, const QString &typedQu
   // hiding it right away would flash the previous page's last frame while
   // the new one loads, since navigation is asynchronous. state_ stays Gate
   // (or Empty) in the meantime, so a resize mid-load still repositions the
-  // still-visible gate correctly. Feedback while waiting: URL shimmer,
-  // then the top progress bar plus a spinner (the bar hits 100% before
-  // Chromium has a frame, so the spinner is what covers that last gap).
+  // still-visible gate correctly. Feedback while waiting: the spinner,
+  // plus the top progress bar once Chromium reports a percent (the bar
+  // hits 100% before Chromium has a frame, so the spinner covers that gap).
   overlay_->setProgress(0);
   // Picked up by the persistent loadFinished handler above once (and only
   // if) this navigation actually succeeds -- see its comment for why this

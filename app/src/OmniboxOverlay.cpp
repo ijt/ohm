@@ -4,7 +4,6 @@
 
 #include <QColor>
 #include <QEvent>
-#include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
@@ -14,7 +13,6 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPen>
-#include <QPropertyAnimation>
 #include <QResizeEvent>
 #include <QSet>
 #include <QSignalBlocker>
@@ -28,8 +26,8 @@ namespace shinto {
 // Accent-colored arc next to the URL, kept spinning until the gate hides.
 // Chromium's loadProgress hits 100% before it has a frame to paint, so the
 // top bar vanishes while the overlay is still up -- this is the "something
-// is still happening" cue for that gap (and for the rest of the load once
-// the URL shimmer has handed off).
+// is still happening" cue for that gap, and for the wait before the first
+// progress tick.
 class Spinner : public QWidget {
  public:
   explicit Spinner(QWidget *parent = nullptr) : QWidget(parent) {
@@ -121,22 +119,11 @@ OmniboxOverlay::OmniboxOverlay(HistoryStore *history, PopularDomains *domains,
   progressBar_->setObjectName(QStringLiteral("ProgressBar"));
   progressBar_->hide();
   spinner_ = new Spinner(this);
+  hint_ = new QLabel(QStringLiteral("Ctrl+? shortcuts"), this);
+  hint_->setObjectName(QStringLiteral("ShortcutsHint"));
+  hint_->setAlignment(Qt::AlignCenter);
+  hint_->hide();
   // No QLayout -- position is managed by hand in layoutInput().
-
-  // Loading a real page has some inherent latency (DNS, connect, TLS)
-  // before Chromium reports the first loadProgress tick -- the shimmer is
-  // immediate feedback for that gap, submitted at the exact moment Enter
-  // is pressed, independent of the network. setProgress() takes over and
-  // stops it once real progress data arrives.
-  inputOpacity_ = new QGraphicsOpacityEffect(input_);
-  inputOpacity_->setOpacity(1.0);
-  input_->setGraphicsEffect(inputOpacity_);
-  shimmer_ = new QPropertyAnimation(inputOpacity_, "opacity", this);
-  shimmer_->setDuration(700);
-  shimmer_->setStartValue(1.0);
-  shimmer_->setKeyValueAt(0.5, 0.35);
-  shimmer_->setEndValue(1.0);
-  shimmer_->setLoopCount(-1);
 }
 
 void OmniboxOverlay::applyPalette(const Palette &palette) {
@@ -155,8 +142,8 @@ void OmniboxOverlay::showGate(const QString &prefill) {
   progress_ = 0;
   progressBar_->hide();
   awaitingLoad_ = false;
-  stopShimmer();
   stopSpinner();
+  hintEnabled_ = prefill.isEmpty();
   layoutInput();
   show();
   raise();
@@ -175,50 +162,40 @@ void OmniboxOverlay::showLoading(const QString &url) {
   clearSuggestions();
   progress_ = 0;
   progressBar_->hide();
-  stopSpinner();
+  hintEnabled_ = false;
   layoutInput();
   show();
   raise();
-  startShimmer();
+  beginLoad();
   input_->setFocus();
 }
 
 void OmniboxOverlay::hideOverlay() {
   clearSuggestions();
   awaitingLoad_ = false;
-  stopShimmer();
   stopSpinner();
+  hintEnabled_ = false;
+  hint_->hide();
   hide();
 }
 
 void OmniboxOverlay::setProgress(int percent) {
   // loadProgress is connected for the window's whole lifetime -- ignore it
   // unless this overlay is actually waiting on a navigation. Otherwise the
-  // empty gate's about:blank (and stray ticks on Ctrl+L) start the spinner
-  // and nothing ever stops it, since hideOverlay() never runs on the idle
+  // empty gate's about:blank (and stray ticks on Ctrl+L) drive the bar,
+  // and nothing ever clears it, since hideOverlay() never runs on the idle
   // search/url screen.
   if (!awaitingLoad_) return;
   progress_ = qBound(0, percent, 100);
-  // Real progress data has arrived -- the bar takes over from the URL
-  // shimmer, and the spinner stays until hideOverlay() because Chromium
-  // reports 100% (bar hides) before it has a frame to paint.
-  if (progress_ > 0) {
-    stopShimmer();
-    startSpinner();
-  }
+  // The spinner (started in beginLoad()) stays until hideOverlay() because
+  // Chromium reports 100% -- which hides the bar -- before it has a frame.
   progressBar_->setVisible(progress_ > 0 && progress_ < 100 && isVisible());
   layoutProgressBar();
 }
 
-void OmniboxOverlay::startShimmer() {
+void OmniboxOverlay::beginLoad() {
   awaitingLoad_ = true;
-  inputOpacity_->setOpacity(1.0);
-  shimmer_->start();
-}
-
-void OmniboxOverlay::stopShimmer() {
-  shimmer_->stop();
-  inputOpacity_->setOpacity(1.0);
+  startSpinner();
 }
 
 void OmniboxOverlay::startSpinner() {
@@ -262,6 +239,12 @@ void OmniboxOverlay::layoutInput() {
   input_->setGeometry(kMargin, kMargin, inputW, h);
   list_->setGeometry(kMargin, kMargin + h + 4, w, suggestionListHeight());
   list_->setVisible(!items_.isEmpty());
+  const bool showHint = hintEnabled_ && items_.isEmpty();
+  hint_->setVisible(showHint);
+  if (showHint) {
+    const int hintH = hint_->sizeHint().height();
+    hint_->setGeometry(kMargin, height() - kMargin - hintH, w, hintH);
+  }
   layoutProgressBar();
 }
 
@@ -294,8 +277,8 @@ bool OmniboxOverlay::eventFilter(QObject *obj, QEvent *event) {
       if (urlProp.isValid()) {
         // Match what Tab/arrow-selecting a suggestion already does
         // (applySelectionToInput()) -- without this, the input keeps
-        // showing whatever was typed, and the shimmer plays on that
-        // stale text instead of what's actually about to load. Blocked
+        // showing whatever was typed instead of what's actually about to
+        // load. Blocked
         // for the same reason applySelectionToInput() blocks it: setText()
         // fires textChanged -> updateSuggestions() -> rebuilds this very
         // list (and deletes `obj`, the row this event was delivered to)
@@ -404,7 +387,7 @@ void OmniboxOverlay::submit() {
 void OmniboxOverlay::navigateTo(const QString &url, const QString &typedQuery) {
   if (url.isEmpty()) return;
   clearSuggestions();
-  startShimmer();
+  beginLoad();
   emit navigateRequested(url, typedQuery);
 }
 

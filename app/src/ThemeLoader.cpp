@@ -110,7 +110,9 @@ QString Palette::toQss() const {
              "#OmniboxOverlay #SuggestionDismiss {"
              " color: %4; background: transparent; border: none; font-family: %5; }\n"
              "#OmniboxOverlay #SuggestionDismiss:hover { color: %3; }\n"
-             "#OmniboxOverlay #ProgressBar { background: %6; border: none; }\n")
+             "#OmniboxOverlay #ProgressBar { background: %6; border: none; }\n"
+             "#OmniboxOverlay #ShortcutsHint { color: %4; background: transparent;"
+             " font-family: %5; font-size: 13px; }\n")
       .arg(bg, card, fg, muted, font, accent);
 }
 

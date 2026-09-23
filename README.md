@@ -61,6 +61,9 @@ cmake --build app/build
   [`downloads-panel/`](downloads-panel/)) opened by clicking the bottom
   progress bar (or the "Download started" notification) -- into
   `~/.config/omarchy/plugins/shinto-downloads` and enable it
+- install the shortcuts cheatsheet -- another Quickshell panel (see
+  [`shortcuts-panel/`](shortcuts-panel/)) opened with `Ctrl+?` or `F1` --
+  into `~/.config/omarchy/plugins/shinto-shortcuts` and enable it
 - enable `shinto.service` so the daemon is warm after login
 - rebind `Super + Shift + Return` to Shinto and `Super + Shift + Y` to YouTube in Shinto
 - tag Shinto windows like other Chromium-family browsers
@@ -105,13 +108,15 @@ omarchy default browser shinto
 /usr/share/applications/shinto.desktop
 /usr/share/icons/hicolor/128x128/apps/shinto.png
 /usr/share/shinto/downloads-panel/
+/usr/share/shinto/shortcuts-panel/
 /usr/lib/systemd/user/shinto.service
 ```
 
-The downloads panel at `/usr/share/shinto/downloads-panel/` is only staged
-there by packaged installs, same as `hypr.lua` -- `./shinto install`
-(source-tree only) is what actually copies a plugin into
-`~/.config/omarchy/plugins/` and enables it with Quickshell.
+The Quickshell panels at `/usr/share/shinto/downloads-panel/` and
+`/usr/share/shinto/shortcuts-panel/` are only staged there by packaged
+installs, same as `hypr.lua` -- `./shinto install` (source-tree only) is
+what actually copies plugins into `~/.config/omarchy/plugins/` and enables
+them with Quickshell.
 
 ## Keys
 
@@ -127,6 +132,7 @@ Browser (inside a Shinto window):
 | `Ctrl + R` | Reload the page |
 | `Ctrl + =` / `Ctrl + -` | Zoom in / zoom out |
 | `Ctrl + W` / `Super + Q` | Close this page |
+| `Ctrl + ?` / `F1` | Show keyboard shortcuts |
 
 Hyprland groups (these are the tabs):
 

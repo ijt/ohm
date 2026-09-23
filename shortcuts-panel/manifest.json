@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "shinto.shortcuts",
+  "name": "Shinto Shortcuts",
+  "version": "1.0.0",
+  "author": "Shinto",
+  "license": "MIT",
+  "description": "Shinto's keyboard shortcuts. Summon with Ctrl+? or F1 in a Shinto window, or: omarchy-shell shell toggle shinto.shortcuts",
+  "kinds": [
+    "panel"
+  ],
+  "entryPoints": {
+    "panel": "Panel.qml"
+  }
+}

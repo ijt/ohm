@@ -29,10 +29,9 @@
 #include "PopularDomains.h"
 #include "ThemeLoader.h"
 
-class QGraphicsOpacityEffect;
+class QLabel;
 class QLineEdit;
 class QListWidget;
-class QPropertyAnimation;
 class QResizeEvent;
 
 namespace shinto {
@@ -57,8 +56,8 @@ class OmniboxOverlay : public QWidget {
 
   // A window opened already aimed at a destination (CLI / xdg-open).
   // Prefills `url` without selecting it -- select-all would look like
-  // Ctrl+L "edit this" -- and starts the loading shimmer so the gate
-  // reads as "this is loading", not the empty "search or url" prompt.
+  // Ctrl+L "edit this" -- and starts the spinner so the gate reads as
+  // "this is loading", not the empty "search or url" prompt.
   void showLoading(const QString &url);
 
   // Hides without navigating anywhere -- what Escape does.
@@ -99,7 +98,7 @@ class OmniboxOverlay : public QWidget {
   };
 
   void submit();
-  // Shared tail of a navigation: clears suggestions, starts the shimmer,
+  // Shared tail of a navigation: clears suggestions, starts the spinner,
   // and emits navigateRequested. `typedQuery` is forwarded as-is (see the
   // signal's doc comment) -- empty for anything already a real
   // destination (a clicked/picked suggestion), non-empty only for
@@ -116,8 +115,9 @@ class OmniboxOverlay : public QWidget {
   void moveSelection(int delta);
   void applySelectionToInput();
   int suggestionListHeight() const;
-  void startShimmer();
-  void stopShimmer();
+  // Marks this overlay as waiting on a navigation and starts the spinner.
+  // The URL text stays still -- the bar and spinner are the loading cue.
+  void beginLoad();
   void startSpinner();
   void stopSpinner();
   // The suggestion dropdown's per-row "x" button: forgets it (permanently,
@@ -144,11 +144,13 @@ class OmniboxOverlay : public QWidget {
   QListWidget *list_;
   QWidget *progressBar_;
   Spinner *spinner_;
-  QGraphicsOpacityEffect *inputOpacity_;
-  QPropertyAnimation *shimmer_;
-  // True between startShimmer() (overlay submit / showLoading) and the
-  // gate going idle (showGate / hideOverlay). setProgress() no-ops unless
-  // this is set, so about:blank on the empty gate can't leave the spinner
+  QLabel *hint_;
+  // Empty-gate only -- hidden for Ctrl+L / loading so it isn't chrome on
+  // an already-aimed window.
+  bool hintEnabled_ = false;
+  // True between beginLoad() (overlay submit / showLoading) and the gate
+  // going idle (showGate / hideOverlay). setProgress() no-ops unless this
+  // is set, so about:blank on the empty gate can't leave the spinner
   // running forever.
   bool awaitingLoad_ = false;
   int progress_ = 0;

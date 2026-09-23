@@ -17,7 +17,7 @@
 Pushing a `v*` tag runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which builds `x86_64` and `aarch64` packages and attaches them to the GitHub Release. Branch pushes do not. Install with:
 
 ```bash
-sudo pacman -U shinto-*-x86_64.pkg.tar.zst
+sudo pacman -U shinto-*.pkg.tar.zst
 systemctl --user enable --now shinto.service
 ```
 

@@ -10,4 +10,10 @@ void showDownloadsPanel() {
                             QStringLiteral("shinto.downloads")});
 }
 
+void showShortcutsPanel() {
+  QProcess::startDetached(QStringLiteral("omarchy-shell"),
+                           {QStringLiteral("shell"), QStringLiteral("toggle"),
+                            QStringLiteral("shinto.shortcuts")});
+}
+
 }  // namespace shinto

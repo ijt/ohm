@@ -9,15 +9,16 @@ set -euo pipefail
 SCRIPT_PATH=$(readlink -f "${BASH_SOURCE[0]}")
 SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 BIN="$SCRIPT_DIR/app/build/shinto-bin"
-# The downloads view (the bottom progress bar / "Download started"
-# notification) is an Omarchy Quickshell panel (see downloads-panel/), not a
-# binary -- it has to be copied into Omarchy's third-party plugin directory
-# for Quickshell to discover it, rather than symlinked into ~/.local/bin.
+# Quickshell panels (downloads-panel/, shortcuts-panel/) are not binaries --
+# they have to be copied into Omarchy's third-party plugin directory for
+# Quickshell to discover them, rather than symlinked into ~/.local/bin.
 DOWNLOADS_PANEL_SRC="$SCRIPT_DIR/downloads-panel"
+SHORTCUTS_PANEL_SRC="$SCRIPT_DIR/shortcuts-panel"
 
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/shinto"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 DOWNLOADS_PANEL_DEST="$CONFIG_HOME/omarchy/plugins/shinto-downloads"
+SHORTCUTS_PANEL_DEST="$CONFIG_HOME/omarchy/plugins/shinto-shortcuts"
 
 usage() {
   cat <<'EOF'
@@ -263,27 +264,35 @@ install_path() {
   ln -sfn "$SCRIPT_PATH" "$HOME/.local/bin/shinto"
 }
 
-install_downloads_panel() {
-  if [[ ! -d $DOWNLOADS_PANEL_SRC ]]; then
-    echo "shinto: $DOWNLOADS_PANEL_SRC not found -- skipping the downloads panel" >&2
+install_omarchy_panel() {
+  local src=$1 dest=$2 plugin_id=$3 label=$4
+  if [[ ! -d $src ]]; then
+    echo "shinto: $src not found -- skipping the $label panel" >&2
     return
   fi
-  mkdir -p "$(dirname "$DOWNLOADS_PANEL_DEST")"
-  rm -rf "$DOWNLOADS_PANEL_DEST"
-  cp -r "$DOWNLOADS_PANEL_SRC" "$DOWNLOADS_PANEL_DEST"
-  # Not fatal -- downloads still persist to the database without this, there's
-  # just no bottom-bar / notification-click view for them until Quickshell
-  # picks the plugin up (e.g. no Omarchy shell running yet).
+  mkdir -p "$(dirname "$dest")"
+  rm -rf "$dest"
+  cp -r "$src" "$dest"
+  # Not fatal -- the panel is optional chrome; the rest of Shinto works
+  # without Quickshell picking the plugin up (e.g. no Omarchy shell yet).
   if command -v omarchy-shell >/dev/null 2>&1; then
     omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
   fi
   if command -v omarchy-plugin-enable >/dev/null 2>&1; then
-    omarchy-plugin-enable shinto.downloads >/dev/null 2>&1 || true
+    omarchy-plugin-enable "$plugin_id" >/dev/null 2>&1 || true
   fi
 }
 
-uninstall_downloads_panel() {
-  rm -rf "$DOWNLOADS_PANEL_DEST"
+install_downloads_panel() {
+  install_omarchy_panel "$DOWNLOADS_PANEL_SRC" "$DOWNLOADS_PANEL_DEST" shinto.downloads downloads
+}
+
+install_shortcuts_panel() {
+  install_omarchy_panel "$SHORTCUTS_PANEL_SRC" "$SHORTCUTS_PANEL_DEST" shinto.shortcuts shortcuts
+}
+
+uninstall_omarchy_panels() {
+  rm -rf "$DOWNLOADS_PANEL_DEST" "$SHORTCUTS_PANEL_DEST"
   if command -v omarchy-shell >/dev/null 2>&1; then
     omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
   fi
@@ -301,6 +310,7 @@ do_install() {
   [[ -e $HOME/.local/bin/shinto ]] && first_install=0
   install_path
   install_downloads_panel
+  install_shortcuts_panel
   install_desktop
   install_hypr
   install_systemd
@@ -308,6 +318,7 @@ do_install() {
   echo "Shinto installed."
   maybe_install_default "$first_install"
   echo "Super+Shift+Return opens Shinto."
+  echo "Ctrl+? (or F1) lists keyboard shortcuts."
   echo "Hyprland groups (the tabs): Super+G, Super+Ctrl+Left/Right, Super+Alt+1-4."
 }
 
@@ -315,7 +326,7 @@ do_uninstall() {
   systemctl --user disable --now shinto.service 2>/dev/null || true
   rm -f "$CONFIG_HOME/systemd/user/shinto.service"
   rm -f "$HOME/.local/bin/shinto"
-  uninstall_downloads_panel
+  uninstall_omarchy_panels
   rm -f "$HOME/.local/share/applications/shinto.desktop"
   rm -f "$CONFIG_HOME/hypr/shinto.lua"
   if [[ -f $CONFIG_HOME/hypr/hyprland.lua ]]; then

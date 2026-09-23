@@ -38,8 +38,9 @@ package() {
   # should also tag `shinto` in default/hypr/apps/browser.lua.
   install -Dm644 shinto/hypr.lua "$pkgdir/usr/share/shinto/hypr.lua"
   install -Dm755 shinto/theme-set-hook.sh "$pkgdir/usr/share/shinto/theme-set-hook.sh"
-  # Omarchy Quickshell panel for the downloads view (see downloads-panel/);
+  # Omarchy Quickshell panels (see downloads-panel/, shortcuts-panel/);
   # same "for source-style installs" caveat as hypr.lua above -- only
-  # `shinto install` (source-tree) actually registers it with Quickshell.
+  # `shinto install` (source-tree) actually registers them with Quickshell.
   cp -r shinto/downloads-panel "$pkgdir/usr/share/shinto/downloads-panel"
+  cp -r shinto/shortcuts-panel "$pkgdir/usr/share/shinto/shortcuts-panel"
 }
