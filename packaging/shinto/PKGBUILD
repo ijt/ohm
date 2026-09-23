@@ -3,7 +3,7 @@
 # The rolling AUR recipe is packaging/PKGBUILD (`shinto-git`).
 
 pkgname=shinto
-pkgver=0.0.3
+pkgver=0.0.4
 pkgrel=1
 pkgdesc="Page viewer for Omarchy — one window, one page; Hyprland is the tab bar"
 arch=('x86_64' 'aarch64')
@@ -36,8 +36,9 @@ package() {
   install -Dm644 "$pkgname-$pkgver/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 "$pkgname-$pkgver/hypr.lua" "$pkgdir/usr/share/shinto/hypr.lua"
   install -Dm755 "$pkgname-$pkgver/theme-set-hook.sh" "$pkgdir/usr/share/shinto/theme-set-hook.sh"
-  # Omarchy Quickshell panel for the downloads view (see downloads-panel/);
+  # Omarchy Quickshell panels (see downloads-panel/, shortcuts-panel/);
   # same "for source-style installs" caveat as hypr.lua above -- only
-  # `shinto install` (source-tree) actually registers it with Quickshell.
+  # `shinto install` (source-tree) actually registers them with Quickshell.
   cp -r "$pkgname-$pkgver/downloads-panel" "$pkgdir/usr/share/shinto/downloads-panel"
+  cp -r "$pkgname-$pkgver/shortcuts-panel" "$pkgdir/usr/share/shinto/shortcuts-panel"
 }
