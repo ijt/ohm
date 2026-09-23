@@ -14,6 +14,18 @@ namespace shinto {
 // was derived from the loaded URL.
 inline const char *kAppId = "shinto";
 
+// Subcommands of the `shinto` wrapper (install/uninstall/daemon/…). The
+// browser binary must never navigate to these: a schemeless QUrl paints as
+// a blank white about:blank window and the command never runs.
+inline bool isShellCommand(const QString &arg) {
+  const QString c = arg.trimmed().toLower();
+  return c == QLatin1String("install") || c == QLatin1String("uninstall") ||
+         c == QLatin1String("start") || c == QLatin1String("stop") ||
+         c == QLatin1String("restart") || c == QLatin1String("status") ||
+         c == QLatin1String("default") || c == QLatin1String("daemon") ||
+         c == QLatin1String("theme") || c == QLatin1String("help");
+}
+
 // ~/.local/share/shinto (respects XDG_DATA_HOME).
 inline QString dataHome() {
   QString base = QString::fromLocal8Bit(qgetenv("XDG_DATA_HOME"));

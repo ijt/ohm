@@ -7,11 +7,15 @@
 #include <QByteArray>
 #include <QCoreApplication>
 #include <QDebug>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QStringList>
 #include <QSurfaceFormat>
 #include <QWebEngineProfile>
 
 #include <cstdio>
+#include <unistd.h>
 
 #include "BrowserWindow.h"
 #include "DownloadManager.h"
@@ -27,6 +31,52 @@ namespace {
 
 QString openCommand(const QString &url) {
   return url.isEmpty() ? QStringLiteral("OPEN") : QStringLiteral("OPEN ") + url;
+}
+
+// Source-tree binary is <root>/app/build/shinto-bin and the wrapper is
+// <root>/shinto. A packaged binary lives in lib/shinto next to /usr/bin/shinto.
+// Only a script (shebang) counts -- never re-exec this ELF.
+QString shellWrapperPath() {
+  const QString exe = QFileInfo(QStringLiteral("/proc/self/exe")).canonicalFilePath();
+  QStringList candidates;
+  QDir dir(QFileInfo(exe).absolutePath());
+  if (dir.cd(QStringLiteral("../.."))) {
+    candidates << dir.filePath(QStringLiteral("shinto"));
+  }
+  candidates << QDir::homePath() + QStringLiteral("/.local/bin/shinto");
+  candidates << QStringLiteral("/usr/bin/shinto");
+  for (const QString &candidate : candidates) {
+    const QFileInfo info(candidate);
+    if (!info.isFile() || !info.isExecutable()) continue;
+    const QString canon = info.canonicalFilePath();
+    if (canon.isEmpty() || canon == exe) continue;
+    QFile file(canon);
+    if (!file.open(QIODevice::ReadOnly)) continue;
+    if (file.read(2) == "#!") return canon;
+  }
+  return {};
+}
+
+// `shinto-bin uninstall` (and the packaged ELF named shinto) used to hand
+// the word to the daemon as a URL. Re-exec the wrapper so the command runs.
+// SHINTO_SUBCOMMAND_FORWARD breaks the loop if the wrapper execs us back.
+bool forwardShellCommand(char **argv, const QString &cmd) {
+  if (qEnvironmentVariableIsSet("SHINTO_SUBCOMMAND_FORWARD")) {
+    std::fprintf(stderr, "shinto: '%s' is a command, not a page\n", qUtf8Printable(cmd));
+    return false;
+  }
+  const QString wrapper = shellWrapperPath();
+  if (wrapper.isEmpty()) {
+    std::fprintf(stderr,
+                 "shinto: '%s' is a command, not a page. Run the shinto script.\n",
+                 qUtf8Printable(cmd));
+    return false;
+  }
+  qputenv("SHINTO_SUBCOMMAND_FORWARD", "1");
+  const QByteArray path = wrapper.toLocal8Bit();
+  execv(path.constData(), argv);
+  std::fprintf(stderr, "shinto: could not run %s\n", path.constData());
+  return false;
 }
 
 }  // namespace
@@ -134,6 +184,10 @@ int main(int argc, char *argv[]) {
 
   const bool forceDaemon = args.removeOne(QStringLiteral("--daemon"));
   const QString url = args.isEmpty() ? QString() : args.first();
+
+  if (!forceDaemon && shinto::isShellCommand(url)) {
+    if (!forwardShellCommand(argv, url)) return 2;
+  }
 
   if (!forceDaemon) {
     // Cheap path: a plain QCoreApplication is enough to drive the local

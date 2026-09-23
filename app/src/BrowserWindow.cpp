@@ -26,6 +26,7 @@
 #include "FindBar.h"
 #include "Hyprland.h"
 #include "OmniboxOverlay.h"
+#include "Shinto.h"
 
 namespace shinto {
 
@@ -213,7 +214,21 @@ Palette BrowserWindow::currentPalette_;
 BrowserWindow *BrowserWindow::spawn(QWebEngineProfile *profile, HistoryStore *history,
                                      PopularDomains *domains, DownloadManager *downloads,
                                      const QString &url) {
-  return spawnInternal(profile, history, domains, downloads, url, /*showEmptyGate=*/true,
+  // A shell command that reached the daemon ("OPEN uninstall") must not
+  // become a window. QUrl("uninstall") is relative, WebEngine ignores it,
+  // and the window sits on about:blank -- a blank white page.
+  if (isShellCommand(url)) {
+    qWarning().noquote() << "shinto: ignoring command passed as a page:" << url;
+    return nullptr;
+  }
+  QString resolved = url;
+  if (!resolved.isEmpty()) {
+    const QUrl parsed(resolved);
+    if (!parsed.isValid() || parsed.scheme().isEmpty()) {
+      resolved = HistoryStore::toUrl(resolved, loadConfig().searchEngineUrl);
+    }
+  }
+  return spawnInternal(profile, history, domains, downloads, resolved, /*showEmptyGate=*/true,
                        /*mapWindow=*/true);
 }
 
@@ -332,9 +347,11 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
     if (loadOk_) history_->recordVisit(navUrl.toString(), webView_->page()->title());
   });
   connect(webView_->page(), &QWebEnginePage::titleChanged, this, [this](const QString &title) {
-    // Hyprland group tabs (and the window decoration) read this title --
-    // leave it as "Shinto" only while the gate/about:blank has no page title.
-    setWindowTitle(title.isEmpty() ? QStringLiteral("Shinto") : title);
+    // Hyprland group tabs (and the window decoration) read this title.
+    // about:blank's own document title is the string "about:blank"; keep
+    // the empty gate labeled Shinto instead of that.
+    const bool internal = webView_->url().scheme() == QLatin1String("about");
+    setWindowTitle(title.isEmpty() || internal ? QStringLiteral("Shinto") : title);
     if (loadOk_) history_->recordVisit(webView_->url().toString(), title);
   });
   // The actual "was this visit real" gate: loadStarted resets it so a

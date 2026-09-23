@@ -8,7 +8,16 @@ set -euo pipefail
 
 SCRIPT_PATH=$(readlink -f "${BASH_SOURCE[0]}")
 SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
-BIN="$SCRIPT_DIR/app/build/shinto-bin"
+# Source builds drop the binary next to this script. Packages install the
+# script at /usr/bin/shinto and the binary at /usr/lib/shinto/shinto-bin --
+# the ELF must not be named `shinto`, or `shinto uninstall` is treated as a URL.
+if [[ -x $SCRIPT_DIR/app/build/shinto-bin ]]; then
+  BIN="$SCRIPT_DIR/app/build/shinto-bin"
+elif [[ -x $SCRIPT_DIR/../lib/shinto/shinto-bin ]]; then
+  BIN="$SCRIPT_DIR/../lib/shinto/shinto-bin"
+else
+  BIN="/usr/lib/shinto/shinto-bin"
+fi
 # Quickshell panels (downloads-panel/, shortcuts-panel/) are not binaries --
 # they have to be copied into Omarchy's third-party plugin directory for
 # Quickshell to discover them, rather than symlinked into ~/.local/bin.
@@ -189,7 +198,7 @@ maybe_install_default() {
   fi
 }
 
-restore_default() {
+scrub_shinto_mime() {
   local file=$HOME/.config/mimeapps.list
   if [[ -f $file ]]; then
     python3 - "$file" <<'PY'
@@ -201,6 +210,10 @@ text = text.replace("=shinto.desktop", "=chromium.desktop")
 path.write_text(text)
 PY
   fi
+}
+
+restore_default() {
+  scrub_shinto_mime
   env -u BROWSER xdg-settings set default-web-browser chromium.desktop >/dev/null 2>&1 || true
   local mime
   for mime in text/html x-scheme-handler/http x-scheme-handler/https; do
@@ -292,6 +305,13 @@ install_shortcuts_panel() {
 }
 
 uninstall_omarchy_panels() {
+  # Disable first so Quickshell unloads the QML before the files disappear.
+  # Deleting a live plugin makes the shell reload it mid-rm and can flash a
+  # blank window.
+  if command -v omarchy-plugin-disable >/dev/null 2>&1; then
+    omarchy-plugin-disable shinto.downloads >/dev/null 2>&1 || true
+    omarchy-plugin-disable shinto.shortcuts >/dev/null 2>&1 || true
+  fi
   rm -rf "$DOWNLOADS_PANEL_DEST" "$SHORTCUTS_PANEL_DEST"
   if command -v omarchy-shell >/dev/null 2>&1; then
     omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
@@ -333,21 +353,52 @@ do_uninstall() {
     python3 - <<'PY'
 from pathlib import Path
 p = Path.home() / ".config/hypr/hyprland.lua"
-text = p.read_text()
-needle = "\n-- Shinto page viewer\nrequire(\"hypr.shinto\")\n"
-p.write_text(text.replace(needle, "\n"))
+lines = p.read_text().splitlines()
+out = []
+i = 0
+while i < len(lines):
+    line = lines[i]
+    if line.strip() == "-- Shinto page viewer" and i + 1 < len(lines) and "hypr.shinto" in lines[i + 1]:
+        i += 2
+        continue
+    if "hypr.shinto" in line:
+        i += 1
+        continue
+    out.append(line)
+    i += 1
+p.write_text("\n".join(out).rstrip() + "\n")
 PY
   fi
   if [[ -f $CONFIG_HOME/hypr/bindings.lua ]]; then
     python3 - <<'PY'
 from pathlib import Path
 p = Path.home() / ".config/hypr/bindings.lua"
-text = p.read_text()
-start = text.find("\n-- Shinto: Super+Shift+Return")
-if start != -1:
-    p.write_text(text[:start].rstrip() + "\n")
+lines = p.read_text().splitlines()
+
+def shinto_line(line):
+    s = line.strip()
+    if s.startswith("-- Shinto"):
+        return True
+    if "Super+Shift+B stays Omarchy" in s:
+        return True
+    if s == "-- Super+Shift+Return stays Omarchy's default-browser launcher (Chromium).":
+        return True
+    if "/shinto" in line or "bin/shinto" in line:
+        return True
+    return False
+
+out = []
+for line in lines:
+    if shinto_line(line):
+        # The unbind immediately above a Shinto bind exists only to install it.
+        if out and out[-1].lstrip().startswith("hl.unbind("):
+            out.pop()
+        continue
+    out.append(line)
+p.write_text("\n".join(out).rstrip() + "\n")
 PY
   fi
+  scrub_shinto_mime
   if [[ $(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null) == shinto.desktop ]]; then
     restore_default
   fi
@@ -359,6 +410,8 @@ PY
 }
 
 cmd=${1:-}
+cmd=${cmd%$'\r'}
+cmd=${cmd,,}
 case $cmd in
   -h | --help | help)
     usage
@@ -435,6 +488,15 @@ case $cmd in
       usage >&2
       exit 2
     fi
+    # Never hand a shell command to the binary. A schemeless word is opened
+    # as a URL and QtWebEngine paints a blank white about:blank window.
+    page=${1:-}
+    case ${page,,} in
+      install|uninstall|start|stop|restart|status|default|daemon|theme|help)
+        echo "shinto: refusing to open '$page' as a page" >&2
+        exit 2
+        ;;
+    esac
     require_bin
     exec "$BIN" "${1:-}"
     ;;

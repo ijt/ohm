@@ -54,12 +54,13 @@ target_compile_definitions(shinto-bin PRIVATE
 
 include(GNUInstallDirs)
 
-# Packaged name is `shinto` (what desktop files and systemd ExecStart call).
-# The build tree keeps the target name shinto-bin so it does not collide with
-# the source-tree bash wrapper also named `shinto`.
+# /usr/bin/shinto is the shell wrapper so `shinto uninstall` runs the
+# command instead of the browser. The ELF stays shinto-bin; naming it
+# `shinto` made `shinto uninstall` a URL, which paints a blank window.
+install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/../shinto"
+  DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(PROGRAMS $<TARGET_FILE:shinto-bin>
-  DESTINATION ${CMAKE_INSTALL_BINDIR}
-  RENAME shinto)
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/shinto)
 
 set(_shinto_packaging_dir "${CMAKE_CURRENT_SOURCE_DIR}/../packaging")
 install(FILES "${_shinto_packaging_dir}/shinto.desktop"
@@ -69,8 +70,9 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png"
   RENAME shinto.png)
 
 # systemd user unit: ExecStart must match the install prefix (/usr for
-# packages, /usr/local for a plain cmake --install).
-set(SHINTO_DAEMON_EXEC "${CMAKE_INSTALL_FULL_BINDIR}/shinto")
+# packages, /usr/local for a plain cmake --install). The daemon is the ELF,
+# not the wrapper, so a packaged unit does not depend on the shell script.
+set(SHINTO_DAEMON_EXEC "${CMAKE_INSTALL_FULL_LIBDIR}/shinto/shinto-bin")
 configure_file("${_shinto_packaging_dir}/shinto.service.in"
   "${CMAKE_CURRENT_BINARY_DIR}/shinto.service" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/shinto.service"

@@ -105,6 +105,7 @@ omarchy default browser shinto
 
 ```
 /usr/bin/shinto
+/usr/lib/shinto/shinto-bin
 /usr/share/applications/shinto.desktop
 /usr/share/icons/hicolor/128x128/apps/shinto.png
 /usr/share/shinto/downloads-panel/
