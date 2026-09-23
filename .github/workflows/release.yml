@@ -57,6 +57,12 @@ jobs:
     needs: package
     runs-on: ubuntu-latest
     steps:
+      # gh release create --verify-tag runs git. Without a checkout the
+      # upload step dies with "not a git repository" after the packages
+      # have already built (v0.0.4).
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           pattern: pkg-*
