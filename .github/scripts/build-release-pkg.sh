@@ -11,10 +11,32 @@ if [[ -z ${TAG:-} ]]; then
 fi
 ver=${TAG#v}
 
+# pacman 7 sandboxes downloads with Landlock and a dedicated user. The ARM
+# release container cannot apply that ruleset, so `pacman -S` aborts with
+# "Landlock ruleset could not be applied" and the GitHub Release is never
+# created (this is why v0.0.3 has a tag and no release). Older pacman
+# rejects the key, so only add it when this binary accepts it. Re-check
+# after -Syu, which may have just upgraded pacman.
+disable_pacman_sandbox() {
+  if grep -q '^DisableSandbox$' /etc/pacman.conf; then
+    return
+  fi
+  local probe
+  probe=$(mktemp)
+  printf '[options]\nDisableSandbox\n' >"$probe"
+  if pacman-conf --config "$probe" >/dev/null 2>&1; then
+    sed -i '/^\[options\]/a DisableSandbox' /etc/pacman.conf
+  fi
+  rm -f "$probe"
+}
+
 pacman-key --init
 pacman-key --populate archlinux
+disable_pacman_sandbox
 pacman -Sy --noconfirm --needed archlinux-keyring
+disable_pacman_sandbox
 pacman -Syu --noconfirm
+disable_pacman_sandbox
 pacman -S --needed --noconfirm base-devel cmake qt6-base qt6-webengine lua54 git zstd
 
 id builder >/dev/null 2>&1 || useradd -m builder
