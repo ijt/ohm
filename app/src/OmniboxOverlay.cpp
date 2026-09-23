@@ -19,6 +19,7 @@
 #include <QTimer>
 #include <QToolButton>
 
+#include "DownloadsPanelLauncher.h"
 #include "ReadlineEditing.h"
 
 namespace shinto {
@@ -306,6 +307,18 @@ bool OmniboxOverlay::eventFilter(QObject *obj, QEvent *event) {
     auto *key = static_cast<QKeyEvent *>(event);
     if (isReadlineEditKey(key)) {
       key->accept();
+      return true;
+    }
+  }
+  // The address field is focused for the whole empty/location gate. Ctrl+?
+  // is advertised there ("Ctrl+? shortcuts"). If the window QShortcut does
+  // not match the delivered combination, the KeyPress lands here and would
+  // otherwise be dropped on the floor (QLineEdit does not insert it, and
+  // does not open the list).
+  if (obj == input_ && event->type() == QEvent::KeyPress) {
+    auto *key = static_cast<QKeyEvent *>(event);
+    if (isShortcutsPanelKey(key)) {
+      if (!key->isAutoRepeat()) showShortcutsPanel();
       return true;
     }
   }

@@ -6,9 +6,17 @@
 // action (see Notify.h's notifyClickable).
 #pragma once
 
+class QKeyEvent;
+
 namespace shinto {
 
 void showDownloadsPanel();
 void showShortcutsPanel();
+
+// Ctrl+/, Ctrl+? (Ctrl+Shift+/ on a US layout), and F1. QLineEdit does not
+// treat these as its own shortcuts, but a focused address field still
+// receives the KeyPress when the window QShortcut's sequence doesn't match
+// the event Qt actually delivered (Ctrl+Shift+Question vs Ctrl+Shift+Slash).
+bool isShortcutsPanelKey(const QKeyEvent *key);
 
 }  // namespace shinto
