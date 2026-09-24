@@ -218,6 +218,15 @@ async fn run(req: Value) -> Result<Value, DomError> {
         }
         Prepared::Get(request) => {
             let response = with_retries!(channel.webauthn_get_assertion(request)).map_err(from_ceremony)?;
+            for (i, a) in response.assertions.iter().enumerate() {
+                tracing::info!(
+                    assertion = i,
+                    credential_id_len = a.credential_id.as_ref().map(|c| c.id.len()),
+                    user_handle_len = a.user.as_ref().map(|u| u.id.len()),
+                    flags = ?a.authenticator_data.flags,
+                    "phone returned an assertion"
+                );
+            }
             // The phone does its own account picking, so hybrid returns one.
             let assertion = response
                 .assertions
