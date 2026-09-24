@@ -109,8 +109,12 @@ void PasskeyOverlay::begin(const QString &host, bool create) {
 void PasskeyOverlay::showQr(int size, const QString &modules) {
   if (!busy_) return;
   qr_->setCode(size, modules);
+  // Unlocked, not just the camera from the lock screen: iOS will create a
+  // passkey from a locked phone but refuses to sign in with one, and only
+  // says "This passkey could not be used to sign in".
   status_->setText(QStringLiteral(
-      "Scan with your phone's camera.\nBluetooth needs to be on for both devices."));
+      "Unlock your phone, then scan with its Camera app.\n"
+      "Bluetooth needs to be on for both devices."));
   setGeometry(parentWidget()->rect());
   placeCard();
   show();
