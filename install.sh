@@ -3,9 +3,13 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
 #
-# Idempotent -- re-running this (e.g. to pick up an update) just pulls the
-# latest commit into the existing clone and rebuilds/reinstalls over it.
-# Everything it does past the initial `git clone`/`git pull` is exactly
+# Installs the newest release (the highest v* tag), not whatever is on
+# main. Set SHINTO_REF to a tag, branch or commit to install that instead,
+# e.g. SHINTO_REF=main for the latest unreleased code.
+#
+# Idempotent -- re-running this (e.g. to pick up an update) fetches into
+# the existing clone, checks out the newest release again, and
+# rebuilds/reinstalls over it. Everything it does past the clone/checkout is exactly
 # what a manual "From source" install does (see README.md); this script
 # is only the dependency-install + clone/build/install glue around that.
 
@@ -72,13 +76,47 @@ else
   echo "  ninja (or make), a C++ compiler, Qt6 (base + webengine + sql), lua5.4, go." >&2
 fi
 
-if [[ -d "$SHINTO_SRC/.git" ]]; then
-  echo "install.sh: updating existing clone at $SHINTO_SRC"
-  git -C "$SHINTO_SRC" pull --ff-only
-else
-  echo "install.sh: cloning to $SHINTO_SRC"
-  mkdir -p "$(dirname "$SHINTO_SRC")"
-  git clone "$REPO_URL" "$SHINTO_SRC"
+# A re-exec from the first pass below has already checked out the ref.
+if [[ -z ${SHINTO_INSTALL_REEXEC:-} ]]; then
+  if [[ -d "$SHINTO_SRC/.git" ]]; then
+    echo "install.sh: updating existing clone at $SHINTO_SRC"
+    # --force: a moved tag should win over the clone's stale copy of it.
+    git -C "$SHINTO_SRC" fetch --tags --force --prune origin
+  else
+    echo "install.sh: cloning to $SHINTO_SRC"
+    mkdir -p "$(dirname "$SHINTO_SRC")"
+    git clone "$REPO_URL" "$SHINTO_SRC"
+  fi
+
+  ref=${SHINTO_REF:-}
+  if [[ -z $ref ]]; then
+    ref=$(git -C "$SHINTO_SRC" tag -l 'v*' --sort=-v:refname | head -n 1)
+    if [[ -z $ref ]]; then
+      echo "install.sh: no v* release tags in $REPO_URL; set SHINTO_REF=main to install the latest code" >&2
+      exit 1
+    fi
+  fi
+
+  # A branch is followed (reset to the fetched origin copy, so a re-run
+  # upgrades it); a tag or commit is checked out detached.
+  if git -C "$SHINTO_SRC" rev-parse --verify --quiet "refs/remotes/origin/$ref" >/dev/null; then
+    echo "install.sh: checking out branch $ref"
+    git -C "$SHINTO_SRC" checkout --quiet -B "$ref" "origin/$ref"
+  else
+    echo "install.sh: checking out $ref"
+    git -C "$SHINTO_SRC" checkout --quiet --detach "$ref"
+  fi
+
+  # This script came from main (or wherever it was run from); the code is
+  # now $ref. Hand off to $ref's own install.sh so its steps (package list,
+  # build flags) match the code it builds. Only an install.sh that knows
+  # this handoff can take it: older releases' copies would try to
+  # `git pull` the detached checkout, so those continue with this script.
+  if grep -q SHINTO_INSTALL_REEXEC "$SHINTO_SRC/install.sh" &&
+    ! cmp -s "${BASH_SOURCE[0]:-}" "$SHINTO_SRC/install.sh"; then
+    echo "install.sh: continuing with $ref's install.sh"
+    SHINTO_INSTALL_REEXEC=1 SHINTO_SRC="$SHINTO_SRC" exec bash "$SHINTO_SRC/install.sh"
+  fi
 fi
 
 echo "install.sh: building the C++ daemon"

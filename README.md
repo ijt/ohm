@@ -55,8 +55,16 @@ curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
 [`install.sh`](install.sh) installs any missing packages via `pacman`
 (asking first), clones to `~/.local/share/shinto/src` (or updates it if
 it's already there -- re-running this line later is how you upgrade),
+checks out the newest [release](https://github.com/ijt/shinto/releases),
 and does exactly what "From source" below does. Read it before piping it
 into `bash` if you'd rather not take that on faith.
+
+To install something other than the newest release, set `SHINTO_REF` to
+a tag, branch or commit. For the latest unreleased code:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | SHINTO_REF=main bash
+```
 
 ### From source (Omarchy / Hyprland)
 
