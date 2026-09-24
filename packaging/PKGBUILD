@@ -15,6 +15,9 @@ depends=('qt6-base' 'qt6-webengine' 'lua54'
          'dbus' 'systemd-libs' 'publicsuffix-list')
 optdepends=('bluez: phone passkeys (the phone proves it is nearby over Bluetooth)')
 makedepends=('git' 'cmake' 'cargo')
+# !lto: makepkg's -flto=auto turns shinto-passkey's C dependencies (ring)
+# into GCC LTO bitcode, which rustc's lld (the x86_64 default) can't link.
+options=('!lto')
 provides=('shinto')
 conflicts=('shinto')
 install=shinto-git.install

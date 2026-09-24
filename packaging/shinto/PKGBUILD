@@ -16,7 +16,9 @@ optdepends=('bluez: phone passkeys (the phone proves it is nearby over Bluetooth
 makedepends=('git' 'cmake' 'cargo')
 conflicts=('shinto-git')
 install=shinto.install
-options=('!debug')
+# !lto: makepkg's -flto=auto turns shinto-passkey's C dependencies (ring)
+# into GCC LTO bitcode, which rustc's lld (the x86_64 default) can't link.
+options=('!debug' '!lto')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
