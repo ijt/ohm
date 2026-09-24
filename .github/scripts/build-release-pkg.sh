@@ -37,7 +37,8 @@ pacman -Sy --noconfirm --needed archlinux-keyring
 disable_pacman_sandbox
 pacman -Syu --noconfirm
 disable_pacman_sandbox
-pacman -S --needed --noconfirm base-devel cmake qt6-base qt6-webengine lua54 git zstd
+pacman -S --needed --noconfirm base-devel cmake qt6-base qt6-webengine lua54 git zstd \
+  rust publicsuffix-list
 
 id builder >/dev/null 2>&1 || useradd -m builder
 # The GHA checkout is root-owned on the mount; copy so the builder can

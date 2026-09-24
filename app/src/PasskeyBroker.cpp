@@ -173,9 +173,8 @@ QString PasskeyBroker::helperPath() {
   const QString dir = QCoreApplication::applicationDirPath();
   const QStringList candidates = {
       qEnvironmentVariable("SHINTO_PASSKEY_HELPER"),
+      // Built and installed next to shinto-bin (see app/CMakeLists.txt).
       dir + QStringLiteral("/shinto-passkey"),
-      // Running from a source checkout: app/build/shinto-bin.
-      dir + QStringLiteral("/../../passkey-helper/target/release/shinto-passkey"),
       QStandardPaths::findExecutable(QStringLiteral("shinto-passkey")),
   };
   for (const QString &path : candidates) {

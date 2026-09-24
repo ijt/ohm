@@ -9,8 +9,11 @@ pkgdesc="Page viewer for Omarchy — one window, one page; Hyprland is the tab b
 arch=('x86_64' 'aarch64')
 url="https://github.com/ijt/shinto"
 license=('MIT')
-depends=('qt6-base' 'qt6-webengine' 'lua54')
-makedepends=('git' 'cmake')
+depends=('qt6-base' 'qt6-webengine' 'lua54'
+         # shinto-passkey (phone passkeys): D-Bus/BlueZ, hidraw, rp.id checks
+         'dbus' 'systemd-libs' 'publicsuffix-list')
+optdepends=('bluez: phone passkeys (the phone proves it is nearby over Bluetooth)')
+makedepends=('git' 'cmake' 'cargo')
 conflicts=('shinto-git')
 install=shinto.install
 options=('!debug')

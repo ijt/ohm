@@ -77,6 +77,30 @@ install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/../shinto"
 install(PROGRAMS $<TARGET_FILE:shinto-bin>
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/shinto)
 
+# Phone passkeys (../passkey-helper): a Rust helper next to shinto-bin,
+# where PasskeyBroker looks for it. Without cargo, Shinto builds and runs
+# as before, just without passkeys. Cargo keeps its own incremental state,
+# so the always-run target is a quick no-op when nothing changed.
+option(SHINTO_PASSKEYS "Build shinto-passkey for phone passkeys (needs cargo)" ON)
+if(SHINTO_PASSKEYS)
+  find_program(CARGO_EXECUTABLE cargo)
+  if(CARGO_EXECUTABLE)
+    set(_passkey_src "${CMAKE_CURRENT_SOURCE_DIR}/../passkey-helper")
+    set(_passkey_bin "${CMAKE_CURRENT_BINARY_DIR}/shinto-passkey")
+    add_custom_target(shinto-passkey ALL
+      COMMAND "${CARGO_EXECUTABLE}" build --release --locked
+              --manifest-path "${_passkey_src}/Cargo.toml"
+              --target-dir "${CMAKE_CURRENT_BINARY_DIR}/cargo"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+              "${CMAKE_CURRENT_BINARY_DIR}/cargo/release/shinto-passkey" "${_passkey_bin}"
+      COMMENT "Building shinto-passkey (phone passkeys)"
+      USES_TERMINAL)
+    install(PROGRAMS "${_passkey_bin}" DESTINATION ${CMAKE_INSTALL_LIBDIR}/shinto)
+  else()
+    message(WARNING "cargo not found: building without phone passkeys (shinto-passkey)")
+  endif()
+endif()
+
 set(_shinto_packaging_dir "${CMAKE_CURRENT_SOURCE_DIR}/../packaging")
 install(FILES "${_shinto_packaging_dir}/shinto.desktop"
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)

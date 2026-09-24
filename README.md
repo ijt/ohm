@@ -122,6 +122,7 @@ omarchy default browser shinto
 ```
 /usr/bin/shinto
 /usr/lib/shinto/shinto-bin
+/usr/lib/shinto/shinto-passkey
 /usr/share/applications/shinto.desktop
 /usr/share/icons/hicolor/128x128/apps/shinto.png
 /usr/share/shinto/downloads-panel/
@@ -162,6 +163,31 @@ Hyprland groups (these are the tabs):
 | `Super + Alt + 1/2/3/4` | Jump to grouped window N |
 | `Super + Alt + G` | Pull this window out of the group |
 | `Super + G` again | Disband the group |
+
+## Phone passkeys
+
+Sign in with a passkey on your phone, the same QR-code flow Chrome calls
+"use a phone or tablet". When a site asks for a passkey, Shinto shows a QR
+code; scan it with your iPhone's or Android phone's camera and approve with
+Face ID or your fingerprint. That covers passkeys kept in iCloud Keychain,
+Google Password Manager, or a password manager on the phone (1Password,
+Bitwarden, ...). Tested with Google, X, and GitHub on an iPhone.
+
+- **Unlock the phone first.** iOS will create a passkey from the lock-screen
+  camera, but it won't sign in with one ("This passkey could not be used to
+  sign in").
+- **Bluetooth** has to be on for both the computer and the phone. The phone
+  proves it's nearby over Bluetooth; that's what stops a phishing site
+  from relaying your sign-in.
+- The rest travels through Apple's or Google's relay, end-to-end encrypted,
+  the same way it does for Chrome.
+
+This is `shinto-passkey`, a small Rust helper built on
+[libwebauthn](https://github.com/linux-credentials/libwebauthn) (LGPL-2.1+)
+that the build compiles when `cargo` is installed. Shinto takes the site's
+origin from the browser engine, never from the page, and the helper checks
+the passkey's site against it. Not yet: passkey autofill in username
+fields, and "remember this phone".
 
 ## Configuration
 

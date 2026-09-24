@@ -32,6 +32,12 @@ REPO_URL="${SHINTO_REPO_URL:-https://github.com/ijt/shinto.git}"
 # default-generator `cmake -S/-B` + `cmake --build` the README's own "From
 # source" steps do.
 PACMAN_PKGS=(git cmake base-devel qt6-base qt6-webengine lua54)
+# Phone passkeys: shinto-passkey is Rust, and checks sites against the
+# public suffix list. A rustup toolchain already on PATH is fine, and
+# pacman's rust would conflict with the rustup package, so only ask for
+# rust when there's no cargo at all.
+PACMAN_PKGS+=(publicsuffix-list)
+command -v cargo >/dev/null 2>&1 || PACMAN_PKGS+=(rust)
 
 if command -v pacman >/dev/null 2>&1; then
   missing=()
