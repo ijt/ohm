@@ -32,6 +32,7 @@ class DownloadBar;
 class DownloadManager;
 class FindBar;
 class OmniboxOverlay;
+class PasskeyOverlay;
 class WebView;
 
 class BrowserWindow : public QMainWindow {
@@ -167,6 +168,8 @@ class BrowserWindow : public QMainWindow {
   OmniboxOverlay *overlay_;
   FindBar *findBar_;
   DownloadBar *downloadBar_;
+  // Phone-passkey QR prompt; PasskeyBroker drives it.
+  PasskeyOverlay *passkeyOverlay_;
   State state_ = State::Empty;
   // Recording (both `visited` and `typed`) is deferred to loadFinished(true)
   // -- see the constructor -- rather than done eagerly on request, so a

@@ -34,6 +34,8 @@
 #include "FindBar.h"
 #include "Hyprland.h"
 #include "OmniboxOverlay.h"
+#include "PasskeyBroker.h"
+#include "PasskeyOverlay.h"
 #include "Shinto.h"
 
 namespace shinto {
@@ -310,6 +312,7 @@ void BrowserWindow::applyPaletteToAll(const Palette &palette) {
   for (auto *w : instances_) {
     w->overlay_->applyPalette(palette);
     w->findBar_->applyPalette(palette);
+    w->passkeyOverlay_->applyPalette(palette);
     if (w->devTools_) w->devTools_->applyPalette(palette);
   }
 }
@@ -335,6 +338,10 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   downloadBar_ = new DownloadBar(container);
   downloadBar_->applyPalette(currentPalette_);
   connect(downloadBar_, &DownloadBar::clicked, this, &BrowserWindow::showDownloadsPanel);
+
+  passkeyOverlay_ = new PasskeyOverlay(container);
+  passkeyOverlay_->applyPalette(currentPalette_);
+  PasskeyBroker::instance()->attach(webView_->page(), passkeyOverlay_);
   connect(downloads_, &DownloadManager::downloadAdded, this, [this](int) { refreshDownloadBar(); });
   connect(downloads_, &DownloadManager::downloadProgress, this,
           [this](int, qint64, qint64) { refreshDownloadBar(); });
@@ -640,6 +647,7 @@ void BrowserWindow::relayout() {
   if (state_ != State::Loaded) {
     overlay_->setGeometry(centralWidget()->rect());
   }
+  if (passkeyOverlay_->isVisible()) passkeyOverlay_->setGeometry(centralWidget()->rect());
 }
 
 void BrowserWindow::relayoutFindBar() {

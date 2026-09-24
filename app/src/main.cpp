@@ -25,6 +25,7 @@
 #include "SingletonClient.h"
 #include "SingletonServer.h"
 #include "ThemeLoader.h"
+#include "PasskeyBroker.h"
 #include "WebProfile.h"
 
 namespace {
@@ -216,6 +217,7 @@ int main(int argc, char *argv[]) {
 
   // No daemon answered (or --daemon forces this unconditionally): this
   // process becomes the daemon.
+  shinto::PasskeyBroker::registerScheme();  // Qt: before the QApplication.
   QApplication app(argc, argv);
   app.setApplicationName(QString::fromLatin1(shinto::kAppId));
   app.setDesktopFileName(QString::fromLatin1(shinto::kAppId));

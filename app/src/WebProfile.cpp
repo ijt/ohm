@@ -8,6 +8,7 @@
 #include <QWebEngineSettings>
 
 #include "DownloadManager.h"
+#include "PasskeyBroker.h"
 #include "Shinto.h"
 
 namespace shinto {
@@ -59,27 +60,31 @@ void installScrollbarHidingScript(QWebEngineProfile *profile) {
 //    ("Continue with Apple" after submitting an email). Confirmed as
 //    QtWebEngine, not one site, via qutebrowser #8930.
 //
-// 2. Even when feature detection is answered, a site that already knows
-//    the account has a passkey (x.com after a username: "Sign in with
-//    passkey") calls navigator.credentials.get({publicKey}) and waits on
-//    that promise. Qt never shows the transport picker: its dialog
-//    controller only emits webAuthUxRequested once a PIN/account/touch
-//    step is pending, and hybrid/QR (the usual phone passkey) is not in
-//    QWebEngineWebAuthUxRequest at all. With no authenticator UI, the
-//    ceremony does not time out, and the page spinner never stops.
+// 2. A site that already knows the account has a passkey (x.com after a
+//    username: "Sign in with passkey") calls
+//    navigator.credentials.get({publicKey}) and waits on that promise. Qt
+//    never shows a transport picker, hybrid/QR (the usual phone passkey)
+//    isn't in QWebEngineWebAuthUxRequest at all, and the ceremony never
+//    times out, so the page spinner never stops.
 //
-// A native "yes" from those probes is not usable here -- it just sends
-// the site into hang (2) -- so this does not race the real calls. Probes
-// resolve immediately to "no WebAuthn", and publicKey get/create reject
-// immediately with NotSupportedError (what Chromium reports when the API
-// is disabled), which sites treat as "fall back to a password" rather
-// than "the user cancelled". Password-manager credentials.get({password})
-// is left alone.
+// So Qt's WebAuthn is never reached. Probes answer at once. publicKey
+// get/create go to PasskeyBroker, which runs the phone (hybrid) ceremony
+// itself, when the page has a broker token (window.__shintoPasskey, set by
+// a per-page script); without one they reject with NotSupportedError, what
+// Chromium reports when the API is disabled, which sites treat as "fall
+// back to a password" rather than "the user cancelled". Password-manager
+// credentials.get({password}) is left alone.
+//
+// Results are built as real PublicKeyCredential/Authenticator*Response
+// instances (own properties shadowing the native getters), the way
+// password-manager extensions do it, so `instanceof` and toJSON() work.
 //
 // DocumentCreation (Chromium document_start), not DocumentReady: this
 // never touches the DOM, and it has to be in place before an early
-// <head> inline script or auth SDK runs. A ceremony that still reaches
-// Qt is cancelled in BrowserWindow so it can't hang one layer deeper.
+// <head> inline script or auth SDK runs -- which also means fetch and
+// friends are captured before the page can replace them. A ceremony that
+// still reaches Qt is cancelled in BrowserWindow so it can't hang one
+// layer deeper.
 void installWebAuthnShim(QWebEngineProfile *profile) {
   QWebEngineScript script;
   script.setName(QStringLiteral("shinto-webauthn-shim"));
@@ -88,56 +93,177 @@ void installWebAuthnShim(QWebEngineProfile *profile) {
   script.setRunsOnSubFrames(true);
   script.setSourceCode(QStringLiteral(R"JS(
 (function() {
+  var fetch_ = window.fetch, stringify = JSON.stringify, atob_ = atob, btoa_ = btoa;
+  var DOMException_ = DOMException, defineProperty = Object.defineProperty;
+
+  // Read at call time: the per-page token script may run after this one.
+  function available() { return typeof window.__shintoPasskey === 'string'; }
+
   function notSupported() {
-    return Promise.reject(new DOMException('WebAuthn is not available.', 'NotSupportedError'));
+    return Promise.reject(new DOMException_('WebAuthn is not available.', 'NotSupportedError'));
+  }
+
+  function install(obj, name, fn) {
+    fn.__shinto = true;
+    try {
+      defineProperty(obj, name, { value: fn, writable: true, configurable: true, enumerable: false });
+    } catch (e) {
+      try { obj[name] = fn; } catch (e2) {}
+    }
   }
 
   function stub(obj, name, value) {
     if (!obj || typeof obj[name] !== 'function' || obj[name].__shinto) return;
-    function patched() { return Promise.resolve(value); }
-    patched.__shinto = true;
-    try {
-      Object.defineProperty(obj, name,
-        { value: patched, writable: true, configurable: true, enumerable: false });
-    } catch (e) {
-      try { obj[name] = patched; } catch (e2) {}
-    }
+    install(obj, name, function() {
+      return Promise.resolve(typeof value === 'function' ? value() : value);
+    });
   }
 
-  // Static methods on the class itself, per the WebAuthn spec.
+  // Static methods on the class itself, per the WebAuthn spec. No
+  // user-verifying platform authenticator (no Windows Hello / Touch ID
+  // here), but passkeys via a phone, when the broker is there.
   if (typeof PublicKeyCredential !== 'undefined') {
-    stub(PublicKeyCredential, 'getClientCapabilities', {
-      conditionalCreate: false, conditionalGet: false, hybridTransport: false,
-      passkeyPlatformAuthenticator: false, userVerifyingPlatformAuthenticator: false,
-      relatedOrigins: false, signalAllAcceptedCredentials: false,
-      signalCurrentUserDetails: false, signalUnknownCredential: false
+    stub(PublicKeyCredential, 'getClientCapabilities', function() {
+      var phone = available();
+      return {
+        conditionalCreate: false, conditionalGet: false, hybridTransport: phone,
+        passkeyPlatformAuthenticator: phone, userVerifyingPlatformAuthenticator: false,
+        relatedOrigins: false, signalAllAcceptedCredentials: false,
+        signalCurrentUserDetails: false, signalUnknownCredential: false
+      };
     });
     stub(PublicKeyCredential, 'isUserVerifyingPlatformAuthenticatorAvailable', false);
     stub(PublicKeyCredential, 'isConditionalMediationAvailable', false);
   }
 
-  function rejectPublicKey(obj, name) {
+  function toBase64url(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa_(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function fromBase64url(s) {
+    s = String(s).replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob_(s), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  // Options with BufferSources -> the WebAuthn JSON forms (base64url).
+  function encode(v) {
+    if (v instanceof ArrayBuffer) return toBase64url(new Uint8Array(v));
+    if (ArrayBuffer.isView(v)) return toBase64url(new Uint8Array(v.buffer, v.byteOffset, v.byteLength));
+    if (Array.isArray(v)) return v.map(encode);
+    if (v && typeof v === 'object') {
+      var out = {};
+      Object.keys(v).forEach(function(k) { if (v[k] !== undefined) out[k] = encode(v[k]); });
+      return out;
+    }
+    return v;
+  }
+
+  function withOwn(obj, props) {
+    Object.keys(props).forEach(function(k) {
+      defineProperty(obj, k, { value: props[k], enumerable: true });
+    });
+    return obj;
+  }
+
+  function extensionResults(ext) {
+    var out = {};
+    Object.keys(ext || {}).forEach(function(k) { out[k] = ext[k]; });
+    if (ext && ext.prf && ext.prf.results) {
+      var results = { first: fromBase64url(ext.prf.results.first) };
+      if (ext.prf.results.second) results.second = fromBase64url(ext.prf.results.second);
+      out.prf = { enabled: ext.prf.enabled, results: results };
+    }
+    if (ext && ext.largeBlob && ext.largeBlob.blob) {
+      out.largeBlob = { supported: ext.largeBlob.supported, blob: fromBase64url(ext.largeBlob.blob) };
+    }
+    return out;
+  }
+
+  function toCredential(json) {
+    var r = json.response || {};
+    var response = r.attestationObject
+      ? withOwn(Object.create(AuthenticatorAttestationResponse.prototype), {
+          clientDataJSON: fromBase64url(r.clientDataJSON),
+          attestationObject: fromBase64url(r.attestationObject),
+          getTransports: function() { return (r.transports || []).slice(); },
+          getAuthenticatorData: function() { return fromBase64url(r.authenticatorData); },
+          getPublicKey: function() { return r.publicKey ? fromBase64url(r.publicKey) : null; },
+          getPublicKeyAlgorithm: function() { return r.publicKeyAlgorithm; }
+        })
+      : withOwn(Object.create(AuthenticatorAssertionResponse.prototype), {
+          clientDataJSON: fromBase64url(r.clientDataJSON),
+          authenticatorData: fromBase64url(r.authenticatorData),
+          signature: fromBase64url(r.signature),
+          userHandle: r.userHandle ? fromBase64url(r.userHandle) : null
+        });
+    return withOwn(Object.create(PublicKeyCredential.prototype), {
+      id: json.id,
+      rawId: fromBase64url(json.rawId),
+      type: 'public-key',
+      response: response,
+      authenticatorAttachment: json.authenticatorAttachment || 'cross-platform',
+      getClientExtensionResults: function() { return extensionResults(json.clientExtensionResults); },
+      toJSON: function() { return json; }
+    });
+  }
+
+  function aborted(signal) {
+    return signal.reason !== undefined ? signal.reason : new DOMException_('Aborted.', 'AbortError');
+  }
+
+  function ceremony(type, options) {
+    // Passkey autofill needs UI in the page's own fields; not offered
+    // (isConditionalMediationAvailable says so), but some sites try anyway.
+    if (options.mediation === 'conditional') return notSupported();
+    var signal = options.signal;
+    if (signal && signal.aborted) return Promise.reject(aborted(signal));
+    var topOrigin = null;
+    try {
+      var ancestors = location.ancestorOrigins;
+      if (window.top !== window && ancestors && ancestors.length) {
+        topOrigin = ancestors[ancestors.length - 1];
+      }
+    } catch (e) {}
+    var body = stringify({
+      token: window.__shintoPasskey, type: type, topOrigin: topOrigin,
+      options: encode(options.publicKey)
+    });
+    return fetch_.call(window, 'shinto-passkey:ceremony',
+                       { method: 'POST', body: body, signal: signal, credentials: 'omit' })
+      .then(function(r) { return r.json(); })
+      .then(function(reply) {
+        if (reply.result) return toCredential(reply.result);
+        var e = reply.error || {};
+        if (e.name === 'TypeError') throw new TypeError(e.message);
+        throw new DOMException_(e.message || 'The operation failed.', e.name || 'NotAllowedError');
+      }, function() {
+        if (signal && signal.aborted) throw aborted(signal);
+        throw new DOMException_('The passkey request failed.', 'NotAllowedError');
+      });
+  }
+
+  function routePublicKey(obj, name, type) {
     if (!obj || typeof obj[name] !== 'function' || obj[name].__shinto) return;
     var real = obj[name];
-    function patched(options) {
-      if (options && options.publicKey) return notSupported();
+    install(obj, name, function(options) {
+      if (options && options.publicKey) {
+        return available() ? ceremony(type, options) : notSupported();
+      }
       return real.apply(this, arguments);
-    }
-    patched.__shinto = true;
-    try {
-      Object.defineProperty(obj, name,
-        { value: patched, writable: true, configurable: true });
-    } catch (e) {
-      try { obj[name] = patched; } catch (e2) {}
-    }
+    });
   }
 
   var proto = (typeof CredentialsContainer !== 'undefined') ? CredentialsContainer.prototype : null;
-  rejectPublicKey(proto, 'get');
-  rejectPublicKey(proto, 'create');
+  routePublicKey(proto, 'get', 'get');
+  routePublicKey(proto, 'create', 'create');
   if (navigator.credentials) {
-    rejectPublicKey(navigator.credentials, 'get');
-    rejectPublicKey(navigator.credentials, 'create');
+    routePublicKey(navigator.credentials, 'get', 'get');
+    routePublicKey(navigator.credentials, 'create', 'create');
   }
 })();
 )JS"));
@@ -185,6 +311,7 @@ QWebEngineProfile *createSharedProfile(QObject *parent, DownloadManager *downloa
 
   installScrollbarHidingScript(profile);
   installWebAuthnShim(profile);
+  PasskeyBroker::install(profile);
   installDownloadHandler(profile, downloads);
 
   return profile;
