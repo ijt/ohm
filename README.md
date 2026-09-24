@@ -12,6 +12,8 @@ other Arch-based setups that have:
 Omarchy also provides the theme syncing and the Quickshell downloads and
 shortcuts panels. Without Omarchy, the installer skips those parts.
 
+## Quick Install
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
 ```
