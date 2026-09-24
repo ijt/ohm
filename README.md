@@ -59,7 +59,7 @@ cmake --build app/build
 - symlink `~/.local/bin/shinto`
 - install the downloads view -- an Omarchy Quickshell panel (see
   [`downloads-panel/`](downloads-panel/)) opened by clicking the bottom
-  progress bar (or the "Download started" notification) -- into
+  progress bar (or the "Download complete" notification) -- into
   `~/.config/omarchy/plugins/shinto-downloads` and enable it
 - install the shortcuts cheatsheet -- another Quickshell panel (see
   [`shortcuts-panel/`](shortcuts-panel/)) opened with `Ctrl+?` or `F1` --

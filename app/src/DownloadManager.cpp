@@ -233,8 +233,6 @@ void DownloadManager::track(QWebEngineDownloadRequest *download) {
   live_[id] = download;
   emit downloadAdded(id);
 
-  notifyClickable(QStringLiteral("Download started"), candidate, [] { showDownloadsPanel(); });
-
   // Emitted signal throttled to ~4/sec -- receivedBytesChanged fires far
   // more often than any in-process UI needs to redraw. The SQLite write is
   // throttled separately and much more coarsely (~1/sec): the downloads
@@ -280,7 +278,7 @@ void DownloadManager::track(QWebEngineDownloadRequest *download) {
       [this, download, candidate, id, retriesLeft](QWebEngineDownloadRequest::DownloadState state) {
         switch (state) {
           case QWebEngineDownloadRequest::DownloadCompleted: {
-            notify(QStringLiteral("Download complete"), candidate);
+            notifyClickable(QStringLiteral("Download complete"), candidate, [] { showDownloadsPanel(); });
             DownloadRecord r = recordFor(id);
             r.state = State::Completed;
             r.receivedBytes = download->receivedBytes();
