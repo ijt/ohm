@@ -33,6 +33,7 @@ class DownloadManager;
 class FindBar;
 class OmniboxOverlay;
 class PasskeyOverlay;
+class PermissionBar;
 class WebView;
 
 class BrowserWindow : public QMainWindow {
@@ -105,6 +106,7 @@ class BrowserWindow : public QMainWindow {
   void relayout();
   void relayoutFindBar();
   void relayoutDownloadBar();
+  void relayoutPermissionBar();
   // Shows/hides downloadBar_ to match downloads_->hasActive() (and its
   // content to downloads_->latestActive()) -- connected to all three
   // DownloadManager signals, so it doesn't matter which one fired.
@@ -170,6 +172,8 @@ class BrowserWindow : public QMainWindow {
   DownloadBar *downloadBar_;
   // Phone-passkey QR prompt; PasskeyBroker drives it.
   PasskeyOverlay *passkeyOverlay_;
+  // "site wants to use your microphone" prompts, across the top.
+  PermissionBar *permissionBar_;
   State state_ = State::Empty;
   // Recording (both `visited` and `typed`) is deferred to loadFinished(true)
   // -- see the constructor -- rather than done eagerly on request, so a

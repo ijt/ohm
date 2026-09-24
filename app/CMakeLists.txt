@@ -35,6 +35,7 @@ qt_add_executable(shinto-bin
   src/OmniboxOverlay.cpp
   src/PasskeyBroker.cpp
   src/PasskeyOverlay.cpp
+  src/PermissionBar.cpp
   src/FindBar.cpp
   src/ReadlineEditing.cpp
   src/BrowserWindow.cpp

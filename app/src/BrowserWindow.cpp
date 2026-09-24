@@ -36,6 +36,7 @@
 #include "OmniboxOverlay.h"
 #include "PasskeyBroker.h"
 #include "PasskeyOverlay.h"
+#include "PermissionBar.h"
 #include "Shinto.h"
 
 namespace shinto {
@@ -313,6 +314,7 @@ void BrowserWindow::applyPaletteToAll(const Palette &palette) {
     w->overlay_->applyPalette(palette);
     w->findBar_->applyPalette(palette);
     w->passkeyOverlay_->applyPalette(palette);
+    w->permissionBar_->applyPalette(palette);
     if (w->devTools_) w->devTools_->applyPalette(palette);
   }
 }
@@ -342,6 +344,13 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   passkeyOverlay_ = new PasskeyOverlay(container);
   passkeyOverlay_->applyPalette(currentPalette_);
   PasskeyBroker::instance()->attach(webView_->page(), passkeyOverlay_);
+
+  permissionBar_ = new PermissionBar(container);
+  permissionBar_->applyPalette(currentPalette_);
+  connect(permissionBar_, &PermissionBar::visibilityChanged, this,
+          &BrowserWindow::relayoutPermissionBar);
+  connect(webView_->page(), &QWebEnginePage::permissionRequested, permissionBar_,
+          &PermissionBar::request);
   connect(downloads_, &DownloadManager::downloadAdded, this, [this](int) { refreshDownloadBar(); });
   connect(downloads_, &DownloadManager::downloadProgress, this,
           [this](int, qint64, qint64) { refreshDownloadBar(); });
@@ -639,6 +648,7 @@ void BrowserWindow::resizeEvent(QResizeEvent *event) {
   relayout();
   relayoutFindBar();
   relayoutDownloadBar();
+  relayoutPermissionBar();
 }
 
 void BrowserWindow::relayout() {
@@ -664,6 +674,18 @@ void BrowserWindow::relayoutDownloadBar() {
   // small floating box), this bar's whole point is a strip you can't miss.
   downloadBar_->setGeometry(0, centralWidget()->height() - downloadBar_->height(),
                              centralWidget()->width(), downloadBar_->height());
+}
+
+void BrowserWindow::relayoutPermissionBar() {
+  if (!permissionBar_->isVisible()) return;
+  // Full width across the top, over the page (the find bar floats at the
+  // top right and may overlap it; the permission question matters more).
+  const int w = centralWidget()->width();
+  // The text wraps on a narrow tile, so the height follows the width.
+  const int h = permissionBar_->hasHeightForWidth() ? permissionBar_->heightForWidth(w)
+                                                    : permissionBar_->sizeHint().height();
+  permissionBar_->setGeometry(0, 0, w, h);
+  permissionBar_->raise();
 }
 
 void BrowserWindow::refreshDownloadBar() {

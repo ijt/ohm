@@ -57,6 +57,10 @@ inline QString downloadsDbPath() { return dataHome() + "/downloads.sqlite"; }
 // tracked as an exclusion list layered on top instead.
 inline QString dismissedDomainsPath() { return dataHome() + "/dismissed_domains.txt"; }
 
+// Camera/microphone answers per site. Qt only persists the other permission
+// types itself (see PermissionBar).
+inline QString mediaPermissionsPath() { return dataHome() + "/media_permissions.ini"; }
+
 // Omarchy's per-theme color file.
 inline QString colorsTomlPath() {
   return QDir::homePath() + "/.local/state/omarchy/current/theme/colors.toml";
