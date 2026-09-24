@@ -16,6 +16,8 @@ with passkeys from your phone, notifications, screen sharing, and web apps.
 curl -fsSL https://raw.githubusercontent.com/ijt/ohm/main/install.sh | bash
 ```
 
+![Ohm demo: a page per window, Ctrl+T grouping pages as Hyprland tabs, Ctrl+N tiling a page beside them, the shortcuts list, and the omnibox following an Omarchy theme change](docs/demo.gif)
+
 ![Chromium (left) vs. Ohm (right), both on omarchy.org with Hacker News in a second tab](docs/chrome-vs-ohm.png)
 *Chromium on the left, Ohm on the right. Same two tabs; in Ohm they're a Hyprland group.*
 
