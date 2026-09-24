@@ -81,25 +81,6 @@ void killByWord(QLineEdit *edit, bool forward) {
   killSelectionOrRange(edit, std::min(cur, target), std::abs(target - cur));
 }
 
-// Emacs/readline transpose-chars (Ctrl+T): swap the two characters
-// straddling the cursor and move past both. At the very start of the
-// line there's nothing before the cursor to swap, so (matching readline)
-// it transposes the first two characters instead; at the very end it
-// transposes the last two.
-void transposeChars(QLineEdit *edit) {
-  QString text = edit->text();
-  if (text.length() < 2) return;
-  int pos = edit->cursorPosition();
-  if (pos < 1) pos = 1;
-  if (pos > text.length() - 1) pos = text.length() - 1;
-  const QChar before = text.at(pos - 1);
-  const QChar at = text.at(pos);
-  text[pos - 1] = at;
-  text[pos] = before;
-  edit->setText(text);
-  edit->setCursorPosition(pos + 1);
-}
-
 }  // namespace
 
 bool isReadlineEditKey(const QKeyEvent *key) {
@@ -115,7 +96,6 @@ bool isReadlineEditKey(const QKeyEvent *key) {
       case Qt::Key_U:
       case Qt::Key_W:
       case Qt::Key_Y:
-      case Qt::Key_T:
         return true;
       default:
         return false;
@@ -168,9 +148,6 @@ void applyReadlineEdit(QLineEdit *edit, const QKeyEvent *key) {
         return;
       case Qt::Key_Y:  // yank
         edit->insert(g_killBuffer);
-        return;
-      case Qt::Key_T:  // transpose-chars
-        transposeChars(edit);
         return;
       default:
         return;

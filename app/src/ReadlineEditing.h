@@ -1,6 +1,7 @@
-// GNU-readline-style single-line editing (Ctrl+A/E/B/F/D/H/K/U/W/Y/T,
+// GNU-readline-style single-line editing (Ctrl+A/E/B/F/D/H/K/U/W/Y,
 // Alt+B/F/D) shared by every plain QLineEdit that wants it -- currently
 // OmniboxOverlay's address/search input and FindBar's search input.
+// No transpose-chars: Ctrl+T stays "new tab" even while typing.
 //
 // Wired into an existing eventFilter(), not a QLineEdit subclass: both
 // call sites already route their input_'s events through a QObject
@@ -18,7 +19,7 @@ namespace ohm {
 // all, regardless of whether the caller is going to apply the edit right
 // now. Callers use this from two places:
 //  - QEvent::ShortcutOverride, to `accept()` the event and pre-empt a
-//    conflicting window-level QShortcut (this app binds Ctrl+K/Ctrl+T/
+//    conflicting window-level QShortcut (this app binds Ctrl+K/
 //    Ctrl+W/Ctrl+F to other things -- see ReadlineEditing.cpp for why
 //    stealing them back while one of these inputs has focus is safe).
 //  - QEvent::KeyPress, to decide whether to call applyReadlineEdit()

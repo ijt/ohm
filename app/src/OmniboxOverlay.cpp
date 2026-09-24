@@ -295,14 +295,14 @@ bool OmniboxOverlay::eventFilter(QObject *obj, QEvent *event) {
       }
     }
   }
-  // GNU-readline-style editing (Ctrl+A/E/K/U/W/Y/T, Alt+B/F/D, ...): some
-  // of these combos (Ctrl+K, Ctrl+T, Ctrl+F) are also window-level
-  // QShortcuts (edit address / new page / find) -- ShortcutOverride is
-  // Qt's mechanism for a focused widget to reclaim a key before the
-  // shortcut system sees it, and it's safe to reclaim here specifically
-  // because all three of those shortcuts are no-ops anyway once input_
-  // already has focus (edit-address/new-page just (re)focus an input
-  // that's already focused; find doesn't apply while typing a URL).
+  // GNU-readline-style editing (Ctrl+A/E/K/U/W/Y, Alt+B/F/D, ...): some
+  // of these combos (Ctrl+K, Ctrl+F) are also window-level QShortcuts
+  // (edit address / find) -- ShortcutOverride is Qt's mechanism for a
+  // focused widget to reclaim a key before the shortcut system sees it,
+  // and it's safe to reclaim here specifically because both of those
+  // shortcuts are no-ops anyway once input_ already has focus (edit-address
+  // just (re)focuses an input that's already focused; find doesn't apply
+  // while typing a URL). Ctrl+T isn't reclaimed: new tab beats transpose.
   if (obj == input_ && event->type() == QEvent::ShortcutOverride) {
     auto *key = static_cast<QKeyEvent *>(event);
     if (isReadlineEditKey(key)) {
