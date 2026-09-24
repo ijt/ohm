@@ -37,7 +37,7 @@ The app itself is the warm daemon — no separate hidden window needed to keep i
 | Theme-aware omnibox via Omarchy hooks | |
 | A web app host (`ohm --app=URL`: permission prompts, notifications, screen sharing) | |
 
-Omarchy's `omarchy-launch-webapp` still sends web apps to Chromium unless your default browser is on its list; Ohm isn't on it yet. Chromium remains the right tool for Chromium extensions. Ohm is for the web on a tiling compositor.
+Omarchy's `omarchy-launch-webapp` sends web apps to Chromium unless your default browser is on its list, and Ohm isn't on it yet. So when Ohm becomes your default, the installer points your web app entries at `ohm --app=URL` directly (and puts them back on uninstall). Web apps you add later are picked up the next time you run `ohm default` or reinstall. Chromium remains the right tool for Chromium extensions. Ohm is for the web on a tiling compositor.
 
 ## Install
 
