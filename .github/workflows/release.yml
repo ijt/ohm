@@ -36,7 +36,7 @@ jobs:
             arch: aarch64
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build ${{ matrix.arch }} package
         env:
           TAG: ${{ github.ref_name }}
@@ -47,7 +47,7 @@ jobs:
             -w /src \
             ${{ matrix.image }} \
             bash /src/.github/scripts/build-release-pkg.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: pkg-${{ matrix.arch }}
           path: packaging/shinto/shinto-*.pkg.tar.*
@@ -60,11 +60,11 @@ jobs:
       # gh release create --verify-tag runs git. Without a checkout the
       # upload step dies with "not a git repository" after the packages
       # have already built (v0.0.4).
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: pkg-*
           merge-multiple: true
