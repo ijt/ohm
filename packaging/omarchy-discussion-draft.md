@@ -10,7 +10,7 @@
 
 Omarchy already treats the compositor as the window manager people wish browsers were. Ohm takes that seriously: **one window is one page**, Hyprland groups are the tab bar, and the omnibox is a gate you walk through and then it disappears.
 
-It is a small Qt6/QtWebEngine app ([ijt/ohm](https://github.com/ijt/ohm-browser)), not another Chromium skin. Warm daemon opens are well under 150ms. It picks up Omarchy theme colors for the overlay.
+It is a small Qt6/QtWebEngine app ([ijt/ohm-browser](https://github.com/ijt/ohm-browser)), not another Chromium skin. Warm daemon opens are well under 150ms. It picks up Omarchy theme colors for the overlay.
 
 ## Proposal (v1 — optional, not a Chromium replacement)
 
