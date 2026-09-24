@@ -445,6 +445,7 @@ void OmniboxOverlay::updateSuggestions() {
 
   struct Scored {
     Suggestion s;
+    UrlMatchTier tier;
     double score;
   };
   QVector<Scored> candidates;
@@ -467,7 +468,8 @@ void OmniboxOverlay::updateSuggestions() {
   // `typed` row (q="funkyimg.com") against the redirect target -- two
   // rows, different urls, identical "funkyimg.com" label. A url-only key
   // doesn't catch that; the label the user actually sees does.
-  auto tryAdd = [&](const QString &label, const QString &url, SuggestionKind kind, double score) {
+  auto tryAdd = [&](const QString &label, const QString &url, SuggestionKind kind,
+                    UrlMatchTier tier, double score) {
     // QSet::insert() (unlike std::set's) doesn't report whether the value
     // was already present, so check first.
     const QString urlKey = dedupKey(url);
@@ -476,9 +478,12 @@ void OmniboxOverlay::updateSuggestions() {
     if (!labelKey.isEmpty() && seenLabels.contains(labelKey)) return;
     seenUrls.insert(urlKey);
     if (!labelKey.isEmpty()) seenLabels.insert(labelKey);
-    candidates.push_back({{label, url, kind}, score});
+    candidates.push_back({{label, url, kind}, tier, score});
   };
-  // Prefixes first (github.com before github.com/foo/bar), then a blended
+  // Stricter matches first (see UrlMatch.h; popular domains only ever
+  // prefix-match), so looser history matches only fill in below what
+  // prefix matching would have shown. Then prefixes first (github.com
+  // before github.com/foo/bar), then a blended
   // score: a page you've actually used should usually win among peers at
   // the same path depth, but a strong domain match can still outrank a
   // history entry you've only visited once or twice. History score is
@@ -491,12 +496,15 @@ void OmniboxOverlay::updateSuggestions() {
   constexpr int kHistoryScoreCap = 20;
   constexpr double kDomainTopScore = 5.0;
   for (const auto &h : history_->completeVisited(text, maxTotal)) {
-    tryAdd(h.label, h.url, SuggestionKind::History, qMin(h.visitCount, kHistoryScoreCap));
+    tryAdd(h.label, h.url, SuggestionKind::History, h.matchTier,
+           qMin(h.visitCount, kHistoryScoreCap));
   }
   for (const auto &d : domains_->complete(text, maxTotal)) {
-    tryAdd(d.label, d.url, SuggestionKind::Popular, kDomainTopScore / double(d.rank + 1));
+    tryAdd(d.label, d.url, SuggestionKind::Popular, UrlMatchTier::Prefix,
+           kDomainTopScore / double(d.rank + 1));
   }
   std::sort(candidates.begin(), candidates.end(), [](const Scored &a, const Scored &b) {
+    if (a.tier != b.tier) return a.tier < b.tier;
     const int da = pathDepth(a.s.url);
     const int db = pathDepth(b.s.url);
     if (da != db) return da < db;

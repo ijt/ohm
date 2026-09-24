@@ -1,5 +1,7 @@
 #include "HistoryStore.h"
 
+#include <algorithm>
+
 #include <QDateTime>
 #include <QDebug>
 #include <QRegularExpression>
@@ -8,6 +10,7 @@
 #include <QUrl>
 
 #include "Shinto.h"
+#include "UrlMatch.h"
 
 namespace shinto {
 
@@ -66,7 +69,8 @@ bool looksLikeUrl(const QString &q) {
 }
 
 // Typing "https://git" should complete like "git" -- the scheme is default
-// noise, not part of the domain prefix the LIKE clauses match against.
+// noise, not part of what's matched. Also applied to each visited URL, so
+// both sides are compared without scheme or leading "www.".
 QString completionPrefix(const QString &prefix) {
   static const QRegularExpression kScheme(
       QStringLiteral("^[a-zA-Z][a-zA-Z0-9+.-]*://"));
@@ -76,16 +80,6 @@ QString completionPrefix(const QString &prefix) {
   p.remove(kScheme);
   p.remove(kWww);
   return p;
-}
-
-// Escapes a LIKE pattern's own wildcard characters so the user's prefix is
-// matched literally, not interpreted as SQL wildcards.
-QString escapeLike(const QString &raw) {
-  QString out = raw;
-  out.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
-  out.replace(QLatin1Char('%'), QStringLiteral("\\%"));
-  out.replace(QLatin1Char('_'), QStringLiteral("\\_"));
-  return out;
 }
 
 }  // namespace
@@ -157,36 +151,33 @@ QVector<HistoryStore::Suggestion> HistoryStore::completeVisited(const QString &p
   const QString p = completionPrefix(prefix);
   if (p.size() < 2) return out;
 
-  const QString escaped = escapeLike(p);
   QSqlQuery query(db_);
-  // Prefix match against the URL (host, with or without a leading "www.",
-  // over both schemes). Title / typed-query text is not searched -- those
-  // would need their own flow that actually shows the title, otherwise
-  // "git" hits archive.org because its title contains "Digital". The
-  // LEFT JOIN against `typed` is only for the display label of a search
-  // visit. Shallower URLs first (github.com before github.com/foo) so a
-  // heavily-used deep path doesn't crowd the root out of LIMIT; then
-  // visit_count DESC, last_visit DESC.
+  // Every http(s) visit is loaded and scored in C++ (see UrlMatch.h):
+  // history is small enough that this is cheap per keystroke, and the
+  // looser tiers can't be expressed as an indexable LIKE anyway. Only the
+  // URL is searched. Title / typed-query text is not -- those would need
+  // their own flow that actually shows the title, otherwise "git" hits
+  // archive.org because its title contains "Digital". The LEFT JOIN
+  // against `typed` is only for the display label of a search visit.
   query.prepare(QStringLiteral(
-      "SELECT v.url, t.q, v.visit_count FROM visited v"
+      "SELECT v.url, t.q, v.visit_count, v.last_visit FROM visited v"
       " LEFT JOIN typed t ON t.url = v.url"
-      " WHERE v.url LIKE 'http://' || :p1 || '%' ESCAPE '\\'"
-      "    OR v.url LIKE 'https://' || :p2 || '%' ESCAPE '\\'"
-      "    OR v.url LIKE 'http://www.' || :p3 || '%' ESCAPE '\\'"
-      "    OR v.url LIKE 'https://www.' || :p4 || '%' ESCAPE '\\'"
-      " ORDER BY (LENGTH(v.url) - LENGTH(REPLACE(v.url, '/', ''))) ASC,"
-      "          v.visit_count DESC, v.last_visit DESC LIMIT :limit"));
-  query.bindValue(":p1", escaped);
-  query.bindValue(":p2", escaped);
-  query.bindValue(":p3", escaped);
-  query.bindValue(":p4", escaped);
-  query.bindValue(":limit", limit);
+      " WHERE v.url LIKE 'http://%' OR v.url LIKE 'https://%'"));
   if (!query.exec()) {
     qWarning() << "shinto: completeVisited failed:" << query.lastError().text();
     return out;
   }
+  struct Match {
+    Suggestion s;
+    int depth;
+    qint64 lastVisit;
+  };
+  QVector<Match> matches;
   while (query.next()) {
     const QString url = query.value(0).toString();
+    const QString rest = completionPrefix(url);
+    const auto tier = matchUrl(rest, p);
+    if (tier == UrlMatchTier::None) continue;
     // A search visit's `typed.q` is the human-readable form
     // ("weather today"); anything else falls back to the URL-derived
     // label -- most search-engine urls are the noisy one here, not most
@@ -199,8 +190,19 @@ QVector<HistoryStore::Suggestion> HistoryStore::completeVisited(const QString &p
     const QString label =
         (!typedQuery.isEmpty() && !looksLikeUrl(typedQuery)) ? typedQuery
                                                             : displayLabel(url);
-    out.push_back({label, url, visitCount});
+    matches.push_back({{label, url, visitCount, tier}, int(rest.count(QLatin1Char('/'))),
+                       query.value(3).toLongLong()});
   }
+  // Stricter tiers first. Within a tier, shallower URLs first
+  // (github.com before github.com/foo) so a heavily-used deep path doesn't
+  // crowd the root out of `limit`; then visit_count, then recency.
+  std::sort(matches.begin(), matches.end(), [](const Match &a, const Match &b) {
+    if (a.s.matchTier != b.s.matchTier) return a.s.matchTier < b.s.matchTier;
+    if (a.depth != b.depth) return a.depth < b.depth;
+    if (a.s.visitCount != b.s.visitCount) return a.s.visitCount > b.s.visitCount;
+    return a.lastVisit > b.lastVisit;
+  });
+  for (int i = 0; i < matches.size() && i < limit; ++i) out.push_back(matches[i].s);
   return out;
 }
 
