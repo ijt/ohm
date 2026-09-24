@@ -45,6 +45,7 @@ Item {
         { keys: "Ctrl+-", action: "Zoom out", command: "zoom-out" },
         { keys: "Ctrl+P", action: "Print", command: "print" },
         { keys: "Download bar", action: "Show downloads", command: "downloads" },
+        { keys: "F12 / Ctrl+Shift+I", action: "Developer tools (right-click: Inspect)", command: "devtools" },
         { keys: "Ctrl+W / Super+Q", action: "Close this page", command: "close" },
         { keys: "Ctrl+? / F1", action: "This list" }
       ]

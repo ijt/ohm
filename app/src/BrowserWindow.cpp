@@ -1,11 +1,15 @@
 #include "BrowserWindow.h"
 
+#include <functional>
+
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDataStream>
 #include <QFocusEvent>
 #include <QHash>
+#include <QContextMenuEvent>
 #include <QKeyEvent>
+#include <QMenu>
 #include <QPrintDialog>
 #include <QPrinter>
 #include <QResizeEvent>
@@ -23,6 +27,7 @@
 #include <QWebEngineView>
 #include <QWebEngineWebAuthUxRequest>
 
+#include "DevToolsWindow.h"
 #include "DownloadBar.h"
 #include "DownloadManager.h"
 #include "DownloadsPanelLauncher.h"
@@ -46,13 +51,14 @@ bool isShintoShortcut(const QKeyEvent *ke, const QKeySequence &backShortcut) {
   }
   // Ignore KeypadModifier so Ctrl+numpad +/- still match; Shift is only
   // accepted for zoom-in (Ctrl+Shift+= is Key_Plus on most layouts), the
-  // shortcuts overlay (Ctrl+? is Ctrl+Shift+/ on a US layout), and
-  // reopening a closed page (Ctrl+Shift+T).
+  // shortcuts overlay (Ctrl+? is Ctrl+Shift+/ on a US layout), reopening
+  // a closed page (Ctrl+Shift+T), and DevTools (Ctrl+Shift+I).
   const Qt::KeyboardModifiers mods =
       ke->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
-  if (mods == Qt::NoModifier && ke->key() == Qt::Key_F1) return true;
+  if (mods == Qt::NoModifier && (ke->key() == Qt::Key_F1 || ke->key() == Qt::Key_F12)) return true;
   if (mods == (Qt::ControlModifier | Qt::ShiftModifier)) {
     switch (ke->key()) {
+      case Qt::Key_I:
       case Qt::Key_T:
       case Qt::Key_Equal:
       case Qt::Key_Plus:
@@ -161,7 +167,24 @@ class WebView : public QWebEngineView {
     ensureFocusRewriteFilter();
   }
 
+  // Runs for the context menu's "Inspect" item.
+  std::function<void()> onInspect;
+
  protected:
+  // Qt only puts its own "Inspect" (QWebEnginePage::InspectElement) in the
+  // standard menu once a DevTools page is attached, so on a page without
+  // one, add ours -- it attaches DevTools first, then does the same thing.
+  void contextMenuEvent(QContextMenuEvent *event) override {
+    QMenu *menu = createStandardContextMenu();
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+    if (!menu->actions().contains(page()->action(QWebEnginePage::InspectElement)) && onInspect) {
+      if (!menu->isEmpty()) menu->addSeparator();
+      connect(menu->addAction(QStringLiteral("Inspect")), &QAction::triggered, this,
+              [this] { onInspect(); });
+    }
+    menu->popup(event->globalPos());
+  }
+
   bool event(QEvent *e) override {
     if (e->type() == QEvent::ShortcutOverride) {
       auto *ke = static_cast<QKeyEvent *>(e);
@@ -300,6 +323,7 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   setCentralWidget(container);
 
   webView_ = new WebView(profile, config_.backShortcut, container);
+  webView_->onInspect = [this] { inspectElement(); };
 
   overlay_ = new OmniboxOverlay(history_, domains_, &config_, container);
   overlay_->applyPalette(currentPalette_);
@@ -469,6 +493,8 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   addShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Slash), &BrowserWindow::showShortcutsPanel);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_Slash), &BrowserWindow::showShortcutsPanel);
   addShortcut(QKeySequence(Qt::Key_F1), &BrowserWindow::showShortcutsPanel);
+  addShortcut(QKeySequence(Qt::Key_F12), &BrowserWindow::toggleDevTools);
+  addShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_I), &BrowserWindow::toggleDevTools);
 
   if (url.isEmpty()) {
     if (showEmptyGate) {
@@ -525,6 +551,7 @@ void BrowserWindow::runCommand(const QString &name) {
       {QStringLiteral("zoom-out"), &BrowserWindow::onZoomOutShortcut},
       {QStringLiteral("print"), &BrowserWindow::onPrintRequested},
       {QStringLiteral("downloads"), &BrowserWindow::showDownloadsPanel},
+      {QStringLiteral("devtools"), &BrowserWindow::toggleDevTools},
   };
   if (name == QLatin1String("close")) {
     w->close();
@@ -554,6 +581,24 @@ void BrowserWindow::closeEvent(QCloseEvent *event) {
     if (closedPages_.size() > kMaxClosedPages) closedPages_.removeFirst();
   }
   QMainWindow::closeEvent(event);
+}
+
+void BrowserWindow::toggleDevTools() {
+  if (devTools_) {
+    devTools_->close();
+    return;
+  }
+  devTools_ = new DevToolsWindow(webView_->page());
+  devTools_->show();
+}
+
+void BrowserWindow::inspectElement() {
+  if (!devTools_) {
+    devTools_ = new DevToolsWindow(webView_->page());
+    devTools_->show();
+  }
+  // Uses the position of the context menu that is still being handled.
+  webView_->page()->triggerAction(QWebEnginePage::InspectElement);
 }
 
 void BrowserWindow::resizeEvent(QResizeEvent *event) {

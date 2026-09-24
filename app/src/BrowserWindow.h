@@ -11,6 +11,7 @@
 
 #include <QByteArray>
 #include <QMainWindow>
+#include <QPointer>
 #include <QUrl>
 #include <QVector>
 
@@ -26,6 +27,7 @@ class QWebEngineProfile;
 
 namespace shinto {
 
+class DevToolsWindow;
 class DownloadBar;
 class DownloadManager;
 class FindBar;
@@ -142,6 +144,12 @@ class BrowserWindow : public QMainWindow {
   // direction. An empty `text` just clears any existing highlighting
   // (searchChanged's "cleared the box" case) rather than searching.
   void doFind(const QString &text, bool backward);
+  // F12 / Ctrl+Shift+I: opens this page's DevTools window, or closes it
+  // if it's already open.
+  void toggleDevTools();
+  // The context menu's "Inspect": opens DevTools (if needed) and selects
+  // the element under the menu in the Elements panel.
+  void inspectElement();
 
   HistoryStore *history_;
   PopularDomains *domains_;
@@ -167,6 +175,8 @@ class BrowserWindow : public QMainWindow {
   // QPrinter would be destroyed before Chromium finished painting. Lives
   // from dialog-accept until printFinished (or this window's destructor).
   QPrinter *printer_ = nullptr;
+  // Null until F12/Inspect; closes itself when this window's page goes.
+  QPointer<DevToolsWindow> devTools_;
 
   static QVector<BrowserWindow *> instances_;
   static BrowserWindow *lastActive_;
