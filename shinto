@@ -167,7 +167,7 @@ ask_tty() {
   local default=${2:-n}
   local reply
   printf '%s' "$prompt"
-  if ! read -r reply </dev/tty 2>/dev/null; then
+  if ! read -r reply 2>/dev/null </dev/tty; then
     echo
     return 1
   fi
