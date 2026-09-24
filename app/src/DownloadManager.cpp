@@ -9,13 +9,14 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QPointer>
+#include <QProcess>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QUrl>
 #include <QWebEngineDownloadRequest>
 
-#include "DownloadsPanelLauncher.h"
 #include "Notify.h"
 #include "Shinto.h"
 
@@ -70,6 +71,34 @@ DownloadManager::DownloadRecord rowFromQuery(const QSqlQuery &q) {
 const QLatin1String kSelectAllSql(
     "SELECT id, filename, path, url, total_bytes, received_bytes, state,"
     " interrupt_reason, started_at, finished_at FROM downloads ORDER BY started_at DESC");
+
+// Opens the file's folder with the file itself selected, via the
+// freedesktop FileManager1 D-Bus interface (Nautilus implements it, and
+// still opens the folder if the file was moved or deleted before the
+// click). If nothing implements the interface, falls back to just opening
+// the folder with xdg-open. busctl rather than Qt D-Bus since nothing else here links it,
+// and its typed arguments need no GVariant quoting of the URI.
+void showInFileManager(const QString &path) {
+  const QString dir = QFileInfo(path).absolutePath();
+  auto *proc = new QProcess();
+  QObject::connect(proc, &QProcess::finished, proc, [proc, dir](int code, QProcess::ExitStatus status) {
+    if ((status != QProcess::NormalExit || code != 0) && QDir(dir).exists())
+      QProcess::startDetached(QStringLiteral("xdg-open"), {dir});
+    proc->deleteLater();
+  });
+  QObject::connect(proc, &QProcess::errorOccurred, proc, [proc, dir](QProcess::ProcessError error) {
+    if (error != QProcess::FailedToStart) return;
+    if (QDir(dir).exists()) QProcess::startDetached(QStringLiteral("xdg-open"), {dir});
+    proc->deleteLater();
+  });
+  proc->start(QStringLiteral("busctl"),
+              {QStringLiteral("--user"), QStringLiteral("call"),
+               QStringLiteral("org.freedesktop.FileManager1"),
+               QStringLiteral("/org/freedesktop/FileManager1"),
+               QStringLiteral("org.freedesktop.FileManager1"), QStringLiteral("ShowItems"),
+               QStringLiteral("ass"), QStringLiteral("1"),
+               QString::fromUtf8(QUrl::fromLocalFile(path).toEncoded()), QString()});
+}
 
 }  // namespace
 
@@ -275,10 +304,12 @@ void DownloadManager::track(QWebEngineDownloadRequest *download) {
   auto retriesLeft = std::make_shared<int>(8);
   connect(
       download, &QWebEngineDownloadRequest::stateChanged, this,
-      [this, download, candidate, id, retriesLeft](QWebEngineDownloadRequest::DownloadState state) {
+      [this, download, candidate, path = record.path, id,
+       retriesLeft](QWebEngineDownloadRequest::DownloadState state) {
         switch (state) {
           case QWebEngineDownloadRequest::DownloadCompleted: {
-            notifyClickable(QStringLiteral("Download complete"), candidate, [] { showDownloadsPanel(); });
+            notifyClickable(QStringLiteral("Download complete"), candidate,
+                            [path] { showInFileManager(path); });
             DownloadRecord r = recordFor(id);
             r.state = State::Completed;
             r.receivedBytes = download->receivedBytes();
