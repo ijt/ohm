@@ -149,7 +149,22 @@ async fn run(req: Value) -> Result<Value, DomError> {
         ),
         None => RequestOrigin::new(origin),
     };
-    let options = req["options"].to_string();
+    // appid / appidExclude only let a site reach credentials from the U2F
+    // era (security keys registered under an AppID URL). A phone passkey is
+    // never one, so over hybrid they can't change the outcome -- but
+    // libwebauthn validates appid more strictly than Chrome (it won't take
+    // same-site https://api.x.com for https://x.com), which failed x.com's
+    // passkey sign-in outright. Drop them and report appid as unused; rp.id
+    // is still checked against the origin in full.
+    let mut options = req["options"].clone();
+    let had_appid = match options.get_mut("extensions").and_then(Value::as_object_mut) {
+        Some(ext) => {
+            ext.remove("appidExclude");
+            ext.remove("appid").is_some()
+        }
+        None => false,
+    };
+    let options = options.to_string();
     tracing::info!(%kind, origin = origin_str, %options, "shinto-passkey request");
 
     let psl = DatFilePublicSuffixList::from_system_file().map_err(|e| {
@@ -212,7 +227,14 @@ async fn run(req: Value) -> Result<Value, DomError> {
         }
     }
     .map_err(|e| dom("UnknownError", format!("{e:?}")))?;
-    serde_json::from_str(&json).map_err(|e| dom("UnknownError", e.to_string()))
+    let mut result: Value = serde_json::from_str(&json).map_err(|e| dom("UnknownError", e.to_string()))?;
+    if had_appid {
+        if !result["clientExtensionResults"].is_object() {
+            result["clientExtensionResults"] = json!({});
+        }
+        result["clientExtensionResults"]["appid"] = json!(false);
+    }
+    Ok(result)
 }
 
 #[tokio::main]
@@ -225,6 +247,7 @@ async fn main() {
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
         )
         .with_writer(io::stderr)
+        .with_ansi(false)
         .without_time()
         .init();
 
