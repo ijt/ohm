@@ -120,7 +120,7 @@ OmniboxOverlay::OmniboxOverlay(HistoryStore *history, PopularDomains *domains,
   progressBar_->setObjectName(QStringLiteral("ProgressBar"));
   progressBar_->hide();
   spinner_ = new Spinner(this);
-  hint_ = new QLabel(QStringLiteral("Ctrl+? shortcuts"), this);
+  hint_ = new QLabel(QStringLiteral("Ctrl+? lists shortcuts"), this);
   hint_->setObjectName(QStringLiteral("ShortcutsHint"));
   hint_->setAlignment(Qt::AlignCenter);
   hint_->hide();
@@ -311,10 +311,11 @@ bool OmniboxOverlay::eventFilter(QObject *obj, QEvent *event) {
     }
   }
   // The address field is focused for the whole empty/location gate. Ctrl+?
-  // is advertised there ("Ctrl+? shortcuts"). If the window QShortcut does
-  // not match the delivered combination, the KeyPress lands here and would
-  // otherwise be dropped on the floor (QLineEdit does not insert it, and
-  // does not open the list).
+  // is advertised there ("Ctrl+? lists shortcuts") rather than F1, which on
+  // most laptops is a brightness key unless Fn is held. If the window
+  // QShortcut does not match the delivered combination, the KeyPress lands
+  // here and would otherwise be dropped on the floor (QLineEdit does not
+  // insert it, and does not open the list).
   if (obj == input_ && event->type() == QEvent::KeyPress) {
     auto *key = static_cast<QKeyEvent *>(event);
     if (isShortcutsPanelKey(key)) {
