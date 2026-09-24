@@ -533,6 +533,13 @@ case $cmd in
     while [[ ${1:-} == --incognito || ${1:-} == --private || ${1:-} == --inprivate ]]; do
       shift
     done
+    # omarchy-launch-webapp passes Chromium's --app=URL (or --app URL).
+    # Every Shinto window is already chrome-less, so it's just the page.
+    if [[ ${1:-} == --app=* ]]; then
+      set -- "${1#--app=}" "${@:2}"
+    elif [[ ${1:-} == --app ]]; then
+      shift
+    fi
     if [[ ${1:-} == --* ]]; then
       usage >&2
       exit 2

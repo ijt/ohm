@@ -174,6 +174,17 @@ int main(int argc, char *argv[]) {
   args.removeAll(QStringLiteral("--private"));
   args.removeAll(QStringLiteral("--inprivate"));
 
+  // omarchy-launch-webapp runs the browser as `--app=URL` (Chromium's app
+  // mode). Every Shinto window is already chrome-less, so an app is just
+  // a page: take the URL and open it like any other.
+  for (int i = 0; i < args.size(); ++i) {
+    if (args.at(i).startsWith(QLatin1String("--app="))) {
+      args[i] = args.at(i).mid(int(sizeof("--app=")) - 1);
+    } else if (args.at(i) == QLatin1String("--app") && i + 1 < args.size()) {
+      args.removeAt(i);
+    }
+  }
+
   if (args.removeOne(QStringLiteral("--theme"))) {
     // `shinto theme` (the Omarchy theme-set hook): tell an already-running
     // daemon to re-read colors.toml and re-apply it live. A no-op if
