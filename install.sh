@@ -137,8 +137,11 @@ echo "install.sh: running ./ohm install"
 
 # ./ohm install only enables+starts the service if it wasn't already
 # running -- an update re-run needs an explicit restart to actually pick
-# up the rebuilt binary, so just always do it.
-systemctl --user restart ohm.service
+# up the rebuilt binary, so just always do it -- when there's a user
+# session to do it in (./ohm install says so when there isn't).
+if systemctl --user show-environment >/dev/null 2>&1; then
+  systemctl --user restart ohm.service
+fi
 
 echo
 echo "install.sh: done. Source lives at $OHM_SRC (re-run this script to update)."

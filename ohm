@@ -244,11 +244,23 @@ PassEnvironment=WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE FON
 [Install]
 WantedBy=graphical-session.target
 EOF
+  # No user session (a container, a TTY-only box): the unit is written,
+  # there's just nothing to start it yet.
+  if ! systemctl --user show-environment >/dev/null 2>&1; then
+    echo "ohm: no systemd user session -- ohm.service is installed but not started" >&2
+    return
+  fi
   systemctl --user daemon-reload
   systemctl --user enable --now ohm.service
 }
 
 install_hypr() {
+  # Hyprland is what gives Ohm tabs, but a missing config shouldn't stop
+  # the rest of the install.
+  if [[ ! -d $CONFIG_HOME/hypr ]]; then
+    echo "ohm: no ~/.config/hypr -- skipping the Hyprland window rule and keybindings" >&2
+    return
+  fi
   local dest=$CONFIG_HOME/hypr/ohm.lua
   cp "$SCRIPT_DIR/hypr.lua" "$dest"
   local main=$CONFIG_HOME/hypr/hyprland.lua
