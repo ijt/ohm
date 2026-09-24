@@ -3,7 +3,7 @@
 # The rolling AUR recipe is packaging/PKGBUILD (`ohm-browser-git`).
 
 pkgname=ohm-browser
-pkgver=0.2.1
+pkgver=0.3.0
 pkgrel=1
 pkgdesc="Page viewer for Omarchy — one window, one page; Hyprland is the tab bar"
 arch=('x86_64' 'aarch64')
