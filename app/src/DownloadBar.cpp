@@ -4,7 +4,7 @@
 #include <QMouseEvent>
 #include <QResizeEvent>
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 constexpr int kHeight = 28;
@@ -81,4 +81,4 @@ void DownloadBar::layoutChildren() {
   fill_->setGeometry(0, 0, width() * percent_ / 100, height());
 }
 
-}  // namespace shinto
+}  // namespace ohm

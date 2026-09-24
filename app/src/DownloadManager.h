@@ -16,7 +16,7 @@
 
 class QWebEngineDownloadRequest;
 
-namespace shinto {
+namespace ohm {
 
 class DownloadManager : public QObject {
   Q_OBJECT
@@ -45,7 +45,7 @@ class DownloadManager : public QObject {
 
   explicit DownloadManager(QObject *parent = nullptr);
 
-  // Opens (creating if needed) the SQLite store at shinto::downloadsDbPath().
+  // Opens (creating if needed) the SQLite store at ohm::downloadsDbPath().
   // Returns false (and logs) if the SQLite driver/file can't be opened. Any
   // row still InProgress from a previous daemon run is flipped to
   // Interrupted here -- its real QWebEngineDownloadRequest died with that
@@ -110,4 +110,4 @@ class DownloadManager : public QObject {
   QHash<int, QPointer<QWebEngineDownloadRequest>> live_;
 };
 
-}  // namespace shinto
+}  // namespace ohm

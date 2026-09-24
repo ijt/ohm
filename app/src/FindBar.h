@@ -15,7 +15,7 @@ class QLabel;
 class QLineEdit;
 class QToolButton;
 
-namespace shinto {
+namespace ohm {
 
 class FindBar : public QWidget {
   Q_OBJECT
@@ -63,4 +63,4 @@ class FindBar : public QWidget {
   QToolButton *closeBtn_;
 };
 
-}  // namespace shinto
+}  // namespace ohm

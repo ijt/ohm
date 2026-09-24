@@ -7,9 +7,9 @@
 #include <QRegularExpression>
 #include <QTextStream>
 
-#include "Shinto.h"
+#include "Ohm.h"
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
@@ -26,9 +26,9 @@ QString stripScheme(const QString &url) {
 }  // namespace
 
 PopularDomains::PopularDomains() {
-  QFile file(QStringLiteral(":/shinto/top100k-domains.txt"));
+  QFile file(QStringLiteral(":/ohm/top100k-domains.txt"));
   if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    qWarning() << "shinto: could not open bundled domain list";
+    qWarning() << "ohm: could not open bundled domain list";
     return;
   }
   QTextStream stream(&file);
@@ -102,11 +102,11 @@ void PopularDomains::dismiss(const QString &url) {
 
   QFile file(dismissedDomainsPath());
   if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
-    qWarning() << "shinto: could not persist dismissed domain" << domain << "--"
+    qWarning() << "ohm: could not persist dismissed domain" << domain << "--"
                << file.errorString();
     return;  // still excluded for the rest of this daemon's lifetime, just not saved
   }
   QTextStream(&file) << domain << '\n';
 }
 
-}  // namespace shinto
+}  // namespace ohm

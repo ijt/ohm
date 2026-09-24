@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# One-line installer for Shinto on an Omarchy box:
+# One-line installer for Ohm on an Omarchy box:
 #
-#   curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ijt/ohm-browser/main/install.sh | bash
 #
 # Installs the newest release (the highest v* tag), not whatever is on
-# main. Set SHINTO_REF to a tag, branch or commit to install that instead,
-# e.g. SHINTO_REF=main for the latest unreleased code.
+# main. Set OHM_REF to a tag, branch or commit to install that instead,
+# e.g. OHM_REF=main for the latest unreleased code.
 #
 # Idempotent -- re-running this (e.g. to pick up an update) fetches into
 # the existing clone, checks out the newest release again, and
@@ -22,8 +22,8 @@ if [[ $EUID -eq 0 ]]; then
   exit 1
 fi
 
-SHINTO_SRC="${SHINTO_SRC:-$HOME/.local/share/shinto/src}"
-REPO_URL="${SHINTO_REPO_URL:-https://github.com/ijt/shinto.git}"
+OHM_SRC="${OHM_SRC:-$HOME/.local/share/ohm-browser/src}"
+REPO_URL="${OHM_REPO_URL:-https://github.com/ijt/ohm-browser.git}"
 
 # Arch/Omarchy package names for everything CMakeLists.txt needs at build
 # time -- see packaging/PKGBUILD's own depends/makedepends for the subset of
@@ -32,7 +32,7 @@ REPO_URL="${SHINTO_REPO_URL:-https://github.com/ijt/shinto.git}"
 # default-generator `cmake -S/-B` + `cmake --build` the README's own "From
 # source" steps do.
 PACMAN_PKGS=(git cmake base-devel qt6-base qt6-webengine lua54)
-# Phone passkeys: shinto-passkey is Rust, and checks sites against the
+# Phone passkeys: ohm-browser-passkey is Rust, and checks sites against the
 # public suffix list. A rustup toolchain already on PATH is fine, and
 # pacman's rust would conflict with the rustup package, so only ask for
 # rust when there's no cargo at all.
@@ -83,34 +83,34 @@ else
 fi
 
 # A re-exec from the first pass below has already checked out the ref.
-if [[ -z ${SHINTO_INSTALL_REEXEC:-} ]]; then
-  if [[ -d "$SHINTO_SRC/.git" ]]; then
-    echo "install.sh: updating existing clone at $SHINTO_SRC"
+if [[ -z ${OHM_INSTALL_REEXEC:-} ]]; then
+  if [[ -d "$OHM_SRC/.git" ]]; then
+    echo "install.sh: updating existing clone at $OHM_SRC"
     # --force: a moved tag should win over the clone's stale copy of it.
-    git -C "$SHINTO_SRC" fetch --tags --force --prune origin
+    git -C "$OHM_SRC" fetch --tags --force --prune origin
   else
-    echo "install.sh: cloning to $SHINTO_SRC"
-    mkdir -p "$(dirname "$SHINTO_SRC")"
-    git clone "$REPO_URL" "$SHINTO_SRC"
+    echo "install.sh: cloning to $OHM_SRC"
+    mkdir -p "$(dirname "$OHM_SRC")"
+    git clone "$REPO_URL" "$OHM_SRC"
   fi
 
-  ref=${SHINTO_REF:-}
+  ref=${OHM_REF:-}
   if [[ -z $ref ]]; then
-    ref=$(git -C "$SHINTO_SRC" tag -l 'v*' --sort=-v:refname | head -n 1)
+    ref=$(git -C "$OHM_SRC" tag -l 'v*' --sort=-v:refname | head -n 1)
     if [[ -z $ref ]]; then
-      echo "install.sh: no v* release tags in $REPO_URL; set SHINTO_REF=main to install the latest code" >&2
+      echo "install.sh: no v* release tags in $REPO_URL; set OHM_REF=main to install the latest code" >&2
       exit 1
     fi
   fi
 
   # A branch is followed (reset to the fetched origin copy, so a re-run
   # upgrades it); a tag or commit is checked out detached.
-  if git -C "$SHINTO_SRC" rev-parse --verify --quiet "refs/remotes/origin/$ref" >/dev/null; then
+  if git -C "$OHM_SRC" rev-parse --verify --quiet "refs/remotes/origin/$ref" >/dev/null; then
     echo "install.sh: checking out branch $ref"
-    git -C "$SHINTO_SRC" checkout --quiet -B "$ref" "origin/$ref"
+    git -C "$OHM_SRC" checkout --quiet -B "$ref" "origin/$ref"
   else
     echo "install.sh: checking out $ref"
-    git -C "$SHINTO_SRC" checkout --quiet --detach "$ref"
+    git -C "$OHM_SRC" checkout --quiet --detach "$ref"
   fi
 
   # This script came from main (or wherever it was run from); the code is
@@ -118,27 +118,27 @@ if [[ -z ${SHINTO_INSTALL_REEXEC:-} ]]; then
   # build flags) match the code it builds. Only an install.sh that knows
   # this handoff can take it: older releases' copies would try to
   # `git pull` the detached checkout, so those continue with this script.
-  if grep -q SHINTO_INSTALL_REEXEC "$SHINTO_SRC/install.sh" &&
-    ! cmp -s "${BASH_SOURCE[0]:-}" "$SHINTO_SRC/install.sh"; then
+  if grep -q OHM_INSTALL_REEXEC "$OHM_SRC/install.sh" &&
+    ! cmp -s "${BASH_SOURCE[0]:-}" "$OHM_SRC/install.sh"; then
     echo "install.sh: continuing with $ref's install.sh"
-    SHINTO_INSTALL_REEXEC=1 SHINTO_SRC="$SHINTO_SRC" exec bash "$SHINTO_SRC/install.sh"
+    OHM_INSTALL_REEXEC=1 OHM_SRC="$OHM_SRC" exec bash "$OHM_SRC/install.sh"
   fi
 fi
 
 echo "install.sh: building the C++ daemon"
-cmake -S "$SHINTO_SRC/app" -B "$SHINTO_SRC/app/build" -DCMAKE_BUILD_TYPE=Release
+cmake -S "$OHM_SRC/app" -B "$OHM_SRC/app/build" -DCMAKE_BUILD_TYPE=Release
 # A first, fully-clean build of QtWebEngine-linked C++ is the slow part of
 # this whole script -- plain `cmake --build` doesn't parallelize on the
 # default Makefiles generator without being told to.
-cmake --build "$SHINTO_SRC/app/build" --parallel "$(nproc)"
+cmake --build "$OHM_SRC/app/build" --parallel "$(nproc)"
 
-echo "install.sh: running ./shinto install"
-"$SHINTO_SRC/shinto" install
+echo "install.sh: running ./ohm install"
+"$OHM_SRC/ohm" install
 
-# ./shinto install only enables+starts the service if it wasn't already
+# ./ohm install only enables+starts the service if it wasn't already
 # running -- an update re-run needs an explicit restart to actually pick
 # up the rebuilt binary, so just always do it.
-systemctl --user restart shinto.service
+systemctl --user restart ohm-browser.service
 
 echo
-echo "install.sh: done. Source lives at $SHINTO_SRC (re-run this script to update)."
+echo "install.sh: done. Source lives at $OHM_SRC (re-run this script to update)."

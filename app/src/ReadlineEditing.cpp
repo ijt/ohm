@@ -6,7 +6,7 @@
 #include <QKeyEvent>
 #include <QLineEdit>
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
@@ -196,4 +196,4 @@ void applyReadlineEdit(QLineEdit *edit, const QKeyEvent *key) {
   }
 }
 
-}  // namespace shinto
+}  // namespace ohm

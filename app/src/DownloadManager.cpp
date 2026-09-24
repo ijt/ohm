@@ -18,9 +18,9 @@
 #include <QWebEngineDownloadRequest>
 
 #include "Notify.h"
-#include "Shinto.h"
+#include "Ohm.h"
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
@@ -105,10 +105,10 @@ void showInFileManager(const QString &path) {
 DownloadManager::DownloadManager(QObject *parent) : QObject(parent) {}
 
 bool DownloadManager::open() {
-  db_ = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), QStringLiteral("shinto_downloads"));
+  db_ = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), QStringLiteral("ohm_downloads"));
   db_.setDatabaseName(downloadsDbPath());
   if (!db_.open()) {
-    qWarning() << "shinto: could not open downloads db:" << db_.lastError().text();
+    qWarning() << "ohm: could not open downloads db:" << db_.lastError().text();
     return false;
   }
   QSqlQuery q(db_);
@@ -142,7 +142,7 @@ bool DownloadManager::open() {
     // the same connection).
     if (r.state == State::InProgress) {
       r.state = State::Interrupted;
-      r.interruptReason = QStringLiteral("Shinto restarted before this finished");
+      r.interruptReason = QStringLiteral("Ohm restarted before this finished");
       r.finishedAt = QDateTime::currentSecsSinceEpoch();
     }
     records_.push_back(r);
@@ -153,11 +153,11 @@ bool DownloadManager::open() {
       "UPDATE downloads SET state = :interrupted, interrupt_reason = :reason,"
       " finished_at = :now WHERE state = :inprogress"));
   fix.bindValue(":interrupted", static_cast<int>(State::Interrupted));
-  fix.bindValue(":reason", QStringLiteral("Shinto restarted before this finished"));
+  fix.bindValue(":reason", QStringLiteral("Ohm restarted before this finished"));
   fix.bindValue(":now", QDateTime::currentSecsSinceEpoch());
   fix.bindValue(":inprogress", static_cast<int>(State::InProgress));
   if (!fix.exec()) {
-    qWarning() << "shinto: could not mark stale downloads interrupted:" << fix.lastError().text();
+    qWarning() << "ohm: could not mark stale downloads interrupted:" << fix.lastError().text();
   }
   return true;
 }
@@ -215,7 +215,7 @@ void DownloadManager::persist(const DownloadRecord &record) {
   query.bindValue(":started", record.startedAt);
   query.bindValue(":finished", record.finishedAt);
   if (!query.exec()) {
-    qWarning() << "shinto: DownloadManager persist failed:" << query.lastError().text();
+    qWarning() << "ohm: DownloadManager persist failed:" << query.lastError().text();
   }
 }
 
@@ -396,4 +396,4 @@ DownloadManager::DownloadRecord DownloadManager::latestActive() const {
   return best;
 }
 
-}  // namespace shinto
+}  // namespace ohm

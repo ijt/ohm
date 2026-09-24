@@ -2,13 +2,13 @@
 
 #include <QProcess>
 
-namespace shinto {
+namespace ohm {
 
 void notify(const QString &title, const QString &body, bool critical) {
   QProcess::startDetached(
       QStringLiteral("notify-send"),
       {QStringLiteral("-u"), critical ? QStringLiteral("critical") : QStringLiteral("normal"),
-       QStringLiteral("-a"), QStringLiteral("Shinto"), title, body});
+       QStringLiteral("-a"), QStringLiteral("Ohm"), title, body});
 }
 
 void notifyClickable(const QString &title, const QString &body, std::function<void()> onClicked) {
@@ -25,8 +25,8 @@ void notifyClickable(const QString &title, const QString &body, std::function<vo
   QObject::connect(proc, &QProcess::finished, proc, &QObject::deleteLater);
   proc->start(QStringLiteral("notify-send"),
               {QStringLiteral("-u"), QStringLiteral("normal"), QStringLiteral("-a"),
-               QStringLiteral("Shinto"), QStringLiteral("-A"), QStringLiteral("default=Open"), title,
+               QStringLiteral("Ohm"), QStringLiteral("-A"), QStringLiteral("default=Open"), title,
                body});
 }
 
-}  // namespace shinto
+}  // namespace ohm

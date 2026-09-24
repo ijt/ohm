@@ -11,23 +11,23 @@ extern "C" {
 }
 
 #include "Notify.h"
-#include "Shinto.h"
+#include "Ohm.h"
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
 // A broken config should be loud, not a silent fallback the user never
 // learns about -- see Notify.h for why this is more than a qWarning.
 void reportConfigError(const QString &message) {
-  qWarning() << "shinto:" << message;
-  notify(QStringLiteral("Shinto config.lua error"), message, /*critical=*/true);
+  qWarning() << "ohm:" << message;
+  notify(QStringLiteral("Ohm config.lua error"), message, /*critical=*/true);
 }
 
 }  // namespace
 
-ShintoConfig loadConfig() {
-  ShintoConfig config;
+OhmConfig loadConfig() {
+  OhmConfig config;
   const QString path = configLuaPath();
   if (!QFile::exists(path)) {
     return config;  // no config.lua yet -- nothing to report
@@ -86,4 +86,4 @@ ShintoConfig loadConfig() {
   return config;
 }
 
-}  // namespace shinto
+}  // namespace ohm

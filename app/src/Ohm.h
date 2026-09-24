@@ -1,5 +1,5 @@
-// Shared constants and small path helpers used across the Shinto app.
-// Mirrors the paths the old bash `shinto` script/control-server.py used, so a
+// Shared constants and small path helpers used across the Ohm app.
+// Mirrors the paths the old bash `ohm` script/control-server.py used, so a
 // migrating install lands in familiar places.
 #pragma once
 
@@ -7,14 +7,14 @@
 #include <QStandardPaths>
 #include <QString>
 
-namespace shinto {
+namespace ohm {
 
-// Fixed Wayland app_id / QGuiApplication name. Every Shinto window uses this
+// Fixed Wayland app_id / QGuiApplication name. Every Ohm window uses this
 // same id (see hypr.lua), unlike the old Chromium --app windows whose app_id
 // was derived from the loaded URL.
-inline const char *kAppId = "shinto";
+inline const char *kAppId = "ohm-browser";
 
-// Subcommands of the `shinto` wrapper (install/uninstall/daemon/…). The
+// Subcommands of the `ohm` wrapper (install/uninstall/daemon/…). The
 // browser binary must never navigate to these: a schemeless QUrl paints as
 // a blank white about:blank window and the command never runs.
 inline bool isShellCommand(const QString &arg) {
@@ -26,13 +26,13 @@ inline bool isShellCommand(const QString &arg) {
          c == QLatin1String("theme") || c == QLatin1String("help");
 }
 
-// ~/.local/share/shinto (respects XDG_DATA_HOME).
+// ~/.local/share/ohm-browser (respects XDG_DATA_HOME).
 inline QString dataHome() {
   QString base = QString::fromLocal8Bit(qgetenv("XDG_DATA_HOME"));
   if (base.isEmpty()) {
     base = QDir::homePath() + "/.local/share";
   }
-  QDir dir(base + "/shinto");
+  QDir dir(base + "/ohm-browser");
   dir.mkpath(".");
   return dir.absolutePath();
 }
@@ -66,25 +66,25 @@ inline QString colorsTomlPath() {
   return QDir::homePath() + "/.local/state/omarchy/current/theme/colors.toml";
 }
 
-// $XDG_CONFIG_HOME/shinto/config.lua (~/.config/shinto/config.lua by
+// $XDG_CONFIG_HOME/ohm-browser/config.lua (~/.config/ohm-browser/config.lua by
 // default) -- the user-editable Lua config file (search engine, etc; see
-// Config.h). Unlike colorsTomlPath() this one is Shinto's own, not
+// Config.h). Unlike colorsTomlPath() this one is Ohm's own, not
 // Omarchy-managed, and it's fine for it not to exist yet.
 inline QString configLuaPath() {
   QString base = QString::fromLocal8Bit(qgetenv("XDG_CONFIG_HOME"));
   if (base.isEmpty()) {
     base = QDir::homePath() + "/.config";
   }
-  return base + "/shinto/config.lua";
+  return base + "/ohm-browser/config.lua";
 }
 
-// $XDG_RUNTIME_DIR/shinto.sock — the singleton handoff socket.
+// $XDG_RUNTIME_DIR/ohm-browser.sock — the singleton handoff socket.
 inline QString singletonSocketPath() {
   QString runtime = QString::fromLocal8Bit(qgetenv("XDG_RUNTIME_DIR"));
   if (runtime.isEmpty()) {
     runtime = QDir::tempPath();
   }
-  return runtime + "/shinto.sock";
+  return runtime + "/ohm-browser.sock";
 }
 
-}  // namespace shinto
+}  // namespace ohm

@@ -3,18 +3,18 @@
 #include <QKeyEvent>
 #include <QProcess>
 
-namespace shinto {
+namespace ohm {
 
 void showDownloadsPanel() {
   QProcess::startDetached(QStringLiteral("omarchy-shell"),
                            {QStringLiteral("shell"), QStringLiteral("toggle"),
-                            QStringLiteral("shinto.downloads")});
+                            QStringLiteral("ohm-browser.downloads")});
 }
 
 void showShortcutsPanel() {
   QProcess::startDetached(QStringLiteral("omarchy-shell"),
                            {QStringLiteral("shell"), QStringLiteral("toggle"),
-                            QStringLiteral("shinto.shortcuts")});
+                            QStringLiteral("ohm-browser.shortcuts")});
 }
 
 bool isShortcutsPanelKey(const QKeyEvent *key) {
@@ -25,4 +25,4 @@ bool isShortcutsPanelKey(const QKeyEvent *key) {
   return key->key() == Qt::Key_Slash || key->key() == Qt::Key_Question;
 }
 
-}  // namespace shinto
+}  // namespace ohm

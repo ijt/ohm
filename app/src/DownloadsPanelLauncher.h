@@ -1,4 +1,4 @@
-// Toggles Shinto's Omarchy Quickshell panels (downloads-panel/,
+// Toggles Ohm's Omarchy Quickshell panels (downloads-panel/,
 // shortcuts-panel/). Quickshell owns showing/hiding/focusing them, so
 // there's no dedup or window-focus logic to do here, unlike the old
 // terminal-spawned downloads-tui this replaced. Used by BrowserWindow's
@@ -7,7 +7,7 @@
 
 class QKeyEvent;
 
-namespace shinto {
+namespace ohm {
 
 void showDownloadsPanel();
 void showShortcutsPanel();
@@ -18,4 +18,4 @@ void showShortcutsPanel();
 // the event Qt actually delivered (Ctrl+Shift+Question vs Ctrl+Shift+Slash).
 bool isShortcutsPanelKey(const QKeyEvent *key);
 
-}  // namespace shinto
+}  // namespace ohm

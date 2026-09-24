@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "id": "shinto.downloads",
-  "name": "Shinto Downloads",
+  "id": "ohm-browser.downloads",
+  "name": "Ohm Downloads",
   "version": "1.0.0",
-  "author": "Shinto",
+  "author": "Ohm",
   "license": "MIT",
-  "description": "Shinto's downloads list: progress, open file, show in folder, cancel. Summon with: omarchy-shell shell toggle shinto.downloads",
+  "description": "Ohm's downloads list: progress, open file, show in folder, cancel. Summon with: omarchy-shell shell toggle ohm-browser.downloads",
   "kinds": [
     "panel"
   ],

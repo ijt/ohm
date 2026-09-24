@@ -1,11 +1,11 @@
 [Unit]
-Description=Shinto warm browser daemon
+Description=Ohm warm browser daemon
 PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=@SHINTO_DAEMON_EXEC@ --daemon
+ExecStart=@OHM_DAEMON_EXEC@ --daemon
 Restart=always
 RestartSec=2
 TimeoutStopSec=8

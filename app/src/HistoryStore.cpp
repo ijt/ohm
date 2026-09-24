@@ -9,10 +9,10 @@
 #include <QSqlQuery>
 #include <QUrl>
 
-#include "Shinto.h"
+#include "Ohm.h"
 #include "UrlMatch.h"
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
@@ -22,7 +22,7 @@ namespace {
 // implied; other schemes stay visible so http:// / file:// don't look like
 // ordinary sites. A leading "www." is stripped either way, matching
 // PopularDomains' bare-domain labels. A path is kept, e.g.
-// "https://www.github.com/ijt/shinto" -> "github.com/ijt/shinto".
+// "https://www.github.com/ijt/ohm-browser" -> "github.com/ijt/ohm-browser".
 QString displayLabel(const QString &url) {
   static const QRegularExpression kHttps(
       QStringLiteral("^https://"), QRegularExpression::CaseInsensitiveOption);
@@ -87,10 +87,10 @@ QString completionPrefix(const QString &prefix) {
 HistoryStore::HistoryStore(QObject *parent) : QObject(parent) {}
 
 bool HistoryStore::open() {
-  db_ = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), QStringLiteral("shinto_history"));
+  db_ = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), QStringLiteral("ohm_history"));
   db_.setDatabaseName(historyDbPath());
   if (!db_.open()) {
-    qWarning() << "shinto: could not open history db:" << db_.lastError().text();
+    qWarning() << "ohm: could not open history db:" << db_.lastError().text();
     return false;
   }
   QSqlQuery q(db_);
@@ -114,7 +114,7 @@ void HistoryStore::recordTyped(const QString &q, const QString &url) {
   query.bindValue(":q", q.trimmed());
   query.bindValue(":t", QDateTime::currentMSecsSinceEpoch());
   if (!query.exec()) {
-    qWarning() << "shinto: recordTyped failed:" << query.lastError().text();
+    qWarning() << "ohm: recordTyped failed:" << query.lastError().text();
   }
   trimTyped();
 }
@@ -141,7 +141,7 @@ void HistoryStore::recordVisit(const QString &url, const QString &title) {
   query.bindValue(":title", title);
   query.bindValue(":t", QDateTime::currentMSecsSinceEpoch());
   if (!query.exec()) {
-    qWarning() << "shinto: recordVisit failed:" << query.lastError().text();
+    qWarning() << "ohm: recordVisit failed:" << query.lastError().text();
   }
 }
 
@@ -164,7 +164,7 @@ QVector<HistoryStore::Suggestion> HistoryStore::completeVisited(const QString &p
       " LEFT JOIN typed t ON t.url = v.url"
       " WHERE v.url LIKE 'http://%' OR v.url LIKE 'https://%'"));
   if (!query.exec()) {
-    qWarning() << "shinto: completeVisited failed:" << query.lastError().text();
+    qWarning() << "ohm: completeVisited failed:" << query.lastError().text();
     return out;
   }
   struct Match {
@@ -211,7 +211,7 @@ void HistoryStore::forgetVisited(const QString &url) {
   query.prepare(QStringLiteral("DELETE FROM visited WHERE url = :url"));
   query.bindValue(":url", url);
   if (!query.exec()) {
-    qWarning() << "shinto: forgetVisited failed:" << query.lastError().text();
+    qWarning() << "ohm: forgetVisited failed:" << query.lastError().text();
   }
   // Also drop any `typed` row for this exact URL -- completeVisited() joins
   // FROM visited, so an orphaned typed row is harmless for suggestions, but
@@ -223,7 +223,7 @@ void HistoryStore::forgetVisited(const QString &url) {
   typedQuery.prepare(QStringLiteral("DELETE FROM typed WHERE url = :url"));
   typedQuery.bindValue(":url", url);
   if (!typedQuery.exec()) {
-    qWarning() << "shinto: forgetVisited (typed) failed:" << typedQuery.lastError().text();
+    qWarning() << "ohm: forgetVisited (typed) failed:" << typedQuery.lastError().text();
   }
 }
 
@@ -255,4 +255,4 @@ QString HistoryStore::toUrl(const QString &raw, const QString &searchEngineUrl) 
   return url;
 }
 
-}  // namespace shinto
+}  // namespace ohm

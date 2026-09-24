@@ -1,4 +1,4 @@
-// One window = one page (matching Shinto's long-standing philosophy).
+// One window = one page (matching Ohm's long-standing philosophy).
 // Owns a QWebEngineView and an OmniboxOverlay, and is its own state
 // machine: Empty (fresh window, blank gate shown, nothing loaded yet) <->
 // Loaded (gate hidden, page visible) <-> Gate (Ctrl+L on a loaded page
@@ -25,7 +25,7 @@ class QResizeEvent;
 class QWebEngineNewWindowRequest;
 class QWebEngineProfile;
 
-namespace shinto {
+namespace ohm {
 
 class DevToolsWindow;
 class DownloadBar;
@@ -64,7 +64,7 @@ class BrowserWindow : public QMainWindow {
                                          PopularDomains *domains, DownloadManager *downloads,
                                          QWebEngineNewWindowRequest &request);
 
-  // Re-applies a reloaded theme to every live window (the `shinto theme` /
+  // Re-applies a reloaded theme to every live window (the `ohm theme` /
   // Omarchy theme-set-hook path, delivered over the singleton socket).
   static void applyPaletteToAll(const Palette &palette);
 
@@ -115,7 +115,7 @@ class BrowserWindow : public QMainWindow {
   // content to downloads_->latestActive()) -- connected to all three
   // DownloadManager signals, so it doesn't matter which one fired.
   void refreshDownloadBar();
-  // Toggles the "Shinto Downloads" Quickshell panel (see downloads-panel/)
+  // Toggles the "Ohm Downloads" Quickshell panel (see downloads-panel/)
   // -- it reads DownloadManager's own downloads.sqlite directly, no IPC
   // with this process needed.
   void showDownloadsPanel();
@@ -127,12 +127,12 @@ class BrowserWindow : public QMainWindow {
   void onOverlayCancelled();
   void onNewPageShortcut();
   // Ctrl+T: same spawn as onNewPageShortcut, but first groups the current
-  // window so Hyprland auto-joins the new one (groups are Shinto's tabs).
+  // window so Hyprland auto-joins the new one (groups are Ohm's tabs).
   void onNewTabShortcut();
   // Ctrl+Shift+T: reopens the most recently closed page, with its
   // back/forward history, as a new tab in this window's group (like
   // Ctrl+T). Closed pages are kept per daemon process, so this works from
-  // any Shinto window, including one opened after the last one closed.
+  // any Ohm window, including one opened after the last one closed.
   void onReopenClosedShortcut();
   // Once the next load finishes, hides the loading gate and focuses the
   // page. For windows that start loading without going through the gate.
@@ -169,7 +169,7 @@ class BrowserWindow : public QMainWindow {
   // Owned by this window, not shared -- loaded fresh in the constructor
   // (see spawn()'s doc comment), so each window can have read a different
   // config.lua than its siblings if the file changed between opens.
-  ShintoConfig config_;
+  OhmConfig config_;
   WebView *webView_;
   OmniboxOverlay *overlay_;
   FindBar *findBar_;
@@ -184,7 +184,7 @@ class BrowserWindow : public QMainWindow {
   // failed navigation (DNS error, connection refused) never gets recorded,
   // and a search's typed query gets paired with the URL it actually landed
   // on (search engines routinely rewrite/redirect, so that can differ from
-  // the URL Shinto itself requested).
+  // the URL Ohm itself requested).
   bool loadOk_ = false;
   QString pendingTypedQuery_;
   // Heap-allocated because QWebEngineView::print() is async -- a stack
@@ -210,4 +210,4 @@ class BrowserWindow : public QMainWindow {
   static Palette currentPalette_;
 };
 
-}  // namespace shinto
+}  // namespace ohm

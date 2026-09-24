@@ -1,49 +1,49 @@
-# Packaging Shinto
+# Packaging Ohm
 
 ## Files
 
 | File | Role |
 |------|------|
-| `shinto.desktop` | XDG application entry (`Exec=shinto %u`) |
-| `shinto.service.in` | systemd user unit template (filled by CMake) |
-| `PKGBUILD` | AUR `shinto-git` build recipe |
-| `shinto-git.install` | Post-install hint to enable the daemon |
-| `shinto/PKGBUILD` | Versioned `shinto` recipe for GitHub Releases |
+| `ohm-browser.desktop` | XDG application entry (`Exec=ohm %u`) |
+| `ohm-browser.service.in` | systemd user unit template (filled by CMake) |
+| `PKGBUILD` | AUR `ohm-browser-git` build recipe |
+| `ohm-browser-git.install` | Post-install hint to enable the daemon |
+| `ohm/PKGBUILD` | Versioned `ohm` recipe for GitHub Releases |
 
-`cmake --install` (with `-DCMAKE_INSTALL_PREFIX=/usr`) installs the binary, desktop file, icon, and generated unit. Each `PKGBUILD`'s own `package()` step separately stages `hypr.lua`, `theme-set-hook.sh`, and the Quickshell panels (`downloads-panel/`, `shortcuts-panel/`) under `/usr/share/shinto/`.
+`cmake --install` (with `-DCMAKE_INSTALL_PREFIX=/usr`) installs the binary, desktop file, icon, and generated unit. Each `PKGBUILD`'s own `package()` step separately stages `hypr.lua`, `theme-set-hook.sh`, and the Quickshell panels (`downloads-panel/`, `shortcuts-panel/`) under `/usr/share/ohm-browser/`.
 
 ## GitHub Release package
 
 Pushing a `v*` tag runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which builds `x86_64` and `aarch64` packages and attaches them to the GitHub Release. Branch pushes do not. Install with:
 
 ```bash
-sudo pacman -U shinto-*.pkg.tar.zst
-systemctl --user enable --now shinto.service
+sudo pacman -U ohm-*.pkg.tar.zst
+systemctl --user enable --now ohm-browser.service
 ```
 
 To rebuild one locally from a tag:
 
 ```bash
-git archive --format=tar.gz --prefix=shinto-0.0.1/ -o packaging/shinto/shinto-0.0.1.tar.gz v0.0.1
-cd packaging/shinto
+git archive --format=tar.gz --prefix=ohm-0.0.1/ -o packaging/ohm-browser/ohm-0.0.1.tar.gz v0.0.1
+cd packaging/ohm
 makepkg -f
 ```
 
-## Local `shinto-git` smoke test
+## Local `ohm-browser-git` smoke test
 
 ```bash
 cd packaging
 makepkg -si
-systemctl --user enable --now shinto.service
-xdg-settings get default-web-browser   # set to shinto.desktop when ready
+systemctl --user enable --now ohm-browser.service
+xdg-settings get default-web-browser   # set to ohm-browser.desktop when ready
 ```
 
 ## Publishing to the AUR
 
 1. Create an [AUR account](https://aur.archlinux.org) and add your SSH key.
-2. `git clone ssh://aur@aur.archlinux.org/shinto-git.git`
-3. Copy `PKGBUILD` and `shinto-git.install` into that repo.
+2. `git clone ssh://aur@aur.archlinux.org/ohm-browser-git.git`
+3. Copy `PKGBUILD` and `ohm-browser-git.install` into that repo.
 4. `makepkg --printsrcinfo > .SRCINFO`
 5. Commit and `git push`.
 
-Omarchy's optional-browser installers call `omarchy-pkg-aur-add <pkg>`; once `shinto-git` is on the AUR, an Omarchy PR can add `omarchy install browser shinto`.
+Omarchy's optional-browser installers call `omarchy-pkg-aur-add <pkg>`; once `ohm-browser-git` is on the AUR, an Omarchy PR can add `omarchy install browser ohm`.

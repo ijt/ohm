@@ -34,7 +34,7 @@ class QLineEdit;
 class QListWidget;
 class QResizeEvent;
 
-namespace shinto {
+namespace ohm {
 
 class Spinner;
 
@@ -42,7 +42,7 @@ class OmniboxOverlay : public QWidget {
   Q_OBJECT
 
  public:
-  OmniboxOverlay(HistoryStore *history, PopularDomains *domains, const ShintoConfig *config,
+  OmniboxOverlay(HistoryStore *history, PopularDomains *domains, const OhmConfig *config,
                  QWidget *parent = nullptr);
 
   void applyPalette(const Palette &palette);
@@ -77,7 +77,7 @@ class OmniboxOverlay : public QWidget {
   // not something resolved from free-typed text. BrowserWindow uses
   // `typedQuery` to record it against whatever URL the navigation actually
   // lands on (see its loadFinished handler) rather than here: search
-  // engines routinely rewrite/redirect the URL Shinto originally
+  // engines routinely rewrite/redirect the URL Ohm originally
   // requested, so pairing it with the pre-redirect `url` would silently
   // never match anything back up later (HistoryStore::completeVisited()'s
   // join).
@@ -138,7 +138,7 @@ class OmniboxOverlay : public QWidget {
 
   HistoryStore *history_;
   PopularDomains *domains_;
-  const ShintoConfig *config_;
+  const OhmConfig *config_;
   Palette currentPalette_;
   QLineEdit *input_;
   QListWidget *list_;
@@ -157,4 +157,4 @@ class OmniboxOverlay : public QWidget {
   QVector<Suggestion> items_;
 };
 
-}  // namespace shinto
+}  // namespace ohm

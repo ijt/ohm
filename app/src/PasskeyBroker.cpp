@@ -18,11 +18,11 @@
 
 #include "PasskeyOverlay.h"
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
-const QByteArray kScheme = QByteArrayLiteral("shinto-passkey");
+const QByteArray kScheme = QByteArrayLiteral("ohm-browser-passkey");
 
 // Long enough to find the phone and scan; Chrome's own hybrid default is
 // similar. The page's own `timeout` is advisory in the spec anyway.
@@ -172,10 +172,10 @@ PasskeyBroker::PasskeyBroker(QObject *parent) : QWebEngineUrlSchemeHandler(paren
 QString PasskeyBroker::helperPath() {
   const QString dir = QCoreApplication::applicationDirPath();
   const QStringList candidates = {
-      qEnvironmentVariable("SHINTO_PASSKEY_HELPER"),
-      // Built and installed next to shinto-bin (see app/CMakeLists.txt).
-      dir + QStringLiteral("/shinto-passkey"),
-      QStandardPaths::findExecutable(QStringLiteral("shinto-passkey")),
+      qEnvironmentVariable("OHM_PASSKEY_HELPER"),
+      // Built and installed next to ohm-browser-bin (see app/CMakeLists.txt).
+      dir + QStringLiteral("/ohm-browser-passkey"),
+      QStandardPaths::findExecutable(QStringLiteral("ohm-browser-passkey")),
   };
   for (const QString &path : candidates) {
     if (!path.isEmpty() && QFileInfo(path).isExecutable()) return QFileInfo(path).canonicalFilePath();
@@ -190,12 +190,12 @@ void PasskeyBroker::attach(QWebEnginePage *page, PasskeyOverlay *overlay) {
   connect(page, &QObject::destroyed, this, [this, token] { overlays_.remove(token); });
 
   QWebEngineScript script;
-  script.setName(QStringLiteral("shinto-passkey-token"));
+  script.setName(QStringLiteral("ohm-browser-passkey-token"));
   script.setInjectionPoint(QWebEngineScript::DocumentCreation);
   script.setWorldId(QWebEngineScript::MainWorld);
   script.setRunsOnSubFrames(true);
   script.setSourceCode(QStringLiteral(
-      "Object.defineProperty(window, '__shintoPasskey', {value: '%1'});").arg(token));
+      "Object.defineProperty(window, '__ohmPasskey', {value: '%1'});").arg(token));
   page->scripts().insert(script);
 }
 
@@ -248,4 +248,4 @@ void PasskeyBroker::requestStarted(QWebEngineUrlRequestJob *job) {
   new Ceremony(job, overlay, origin, helper, request);
 }
 
-}  // namespace shinto
+}  // namespace ohm

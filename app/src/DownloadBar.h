@@ -14,7 +14,7 @@
 
 class QLabel;
 
-namespace shinto {
+namespace ohm {
 
 class DownloadBar : public QWidget {
   Q_OBJECT
@@ -47,4 +47,4 @@ class DownloadBar : public QWidget {
   int percent_ = 0;  // 0 when totalBytes is unknown (e.g. no Content-Length)
 };
 
-}  // namespace shinto
+}  // namespace ohm

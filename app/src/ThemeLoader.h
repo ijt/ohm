@@ -5,7 +5,7 @@
 
 #include <QString>
 
-namespace shinto {
+namespace ohm {
 
 struct Palette {
   QString bg = QStringLiteral("#1a1b26");
@@ -26,11 +26,11 @@ struct Palette {
 };
 
 // Reads ~/.local/state/omarchy/current/theme/colors.toml (via
-// shinto::colorsTomlPath()) for colors, and resolves the live system
+// ohm::colorsTomlPath()) for colors, and resolves the live system
 // monospace font (see resolveMonospaceFont() in the .cpp) for the font.
 // Missing colors.toml keys, a missing file entirely, or no resolvable font
 // all fall back to Palette's defaults above -- same behavior as the old
 // bash `toml_color`, extended to the font.
 Palette loadPalette();
 
-}  // namespace shinto
+}  // namespace ohm

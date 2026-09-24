@@ -1,7 +1,6 @@
 <RCC>
-  <qresource prefix="/shinto">
+  <qresource prefix="/ohm">
     <file>icon.png</file>
-    <file>fuji.png</file>
     <file>top100k-domains.txt</file>
   </qresource>
 </RCC>

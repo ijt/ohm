@@ -3,9 +3,9 @@
 #include <QLocalServer>
 #include <QLocalSocket>
 
-#include "Shinto.h"
+#include "Ohm.h"
 
-namespace shinto {
+namespace ohm {
 
 SingletonServer::SingletonServer(QObject *parent) : QObject(parent), server_(new QLocalServer(this)) {}
 
@@ -48,4 +48,4 @@ void SingletonServer::handleNewConnection() {
   }
 }
 
-}  // namespace shinto
+}  // namespace ohm

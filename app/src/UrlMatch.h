@@ -6,22 +6,22 @@
 
 #include <QString>
 
-namespace shinto {
+namespace ohm {
 
 enum class UrlMatchTier {
   Prefix = 0,        // "git" -> github.com/...
-  SegmentStart = 1,  // "shinto" -> github.com/ijt/shinto (starts after / . - _ + : ~)
-  Substring = 2,     // "hint" -> github.com/ijt/shinto
-  Scattered = 3,     // "shnto" -> github.com/ijt/shinto (letters in order, close together)
+  SegmentStart = 1,  // "ohm" -> github.com/ijt/ohm-browser (starts after / . - _ + : ~)
+  Substring = 2,     // "rows" -> github.com/ijt/ohm-browser
+  Scattered = 3,     // "brwser" -> github.com/ijt/ohm-browser (letters in order, close together)
   None = 4,
 };
 
 // `target` is the URL with its scheme and a leading "www." already removed
-// ("github.com/ijt/shinto"). `needle` is the typed text, likewise stripped.
+// ("github.com/ijt/ohm-browser"). `needle` is the typed text, likewise stripped.
 // Both are compared case-insensitively. Only Prefix looks past the path
 // into a query string or fragment. Scattered matches need at least 3
 // typed characters, and the matched letters must fall within a window at
 // most twice the typed length, so a long URL doesn't match by accident.
 UrlMatchTier matchUrl(const QString &target, const QString &needle);
 
-}  // namespace shinto
+}  // namespace ohm

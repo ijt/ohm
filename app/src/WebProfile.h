@@ -6,7 +6,7 @@
 class QObject;
 class QWebEngineProfile;
 
-namespace shinto {
+namespace ohm {
 
 class DownloadManager;
 
@@ -17,4 +17,4 @@ class DownloadManager;
 // -- see DownloadManager::track().
 QWebEngineProfile *createSharedProfile(QObject *parent, DownloadManager *downloads);
 
-}  // namespace shinto
+}  // namespace ohm

@@ -8,7 +8,7 @@ domains someone bought and never built on, sitting behind a registrar's
 ad-filled "buy this domain" page. Reported concretely: an omnibox
 suggestion for "x.co" led to exactly that.
 
-This is a one-time offline maintenance script, not something Shinto runs
+This is a one-time offline maintenance script, not something Ohm runs
 itself: it makes one HTTP request per domain (never repeated requests to
 the same server -- the opposite of the abusive-scraping shape) and takes
 a long time over 100k domains, so it's meant to be run occasionally by a
@@ -97,7 +97,7 @@ SHUTDOWN_CONTENT_SIGNATURES = [
 ]
 
 TIMEOUT = 6
-USER_AGENT = "Mozilla/5.0 (compatible; ShintoParkedDomainAudit/1.0; +https://github.com/ijt/shinto)"
+USER_AGENT = "Mozilla/5.0 (compatible; OhmParkedDomainAudit/1.0; +https://github.com/ijt/ohm-browser)"
 
 
 def _fetch(domain):

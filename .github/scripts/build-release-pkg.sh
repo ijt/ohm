@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs as root inside an Arch container (see .github/workflows/release.yml).
-# TAG is v0.0.2; writes shinto-*-*.pkg.tar.* into packaging/shinto/ on the
+# TAG is v0.0.2; writes ohm-browser-*-*.pkg.tar.* into packaging/ohm-browser/ on the
 # mounted repo. makepkg refuses root, so the build runs as an unprivileged
 # user after deps are installed.
 set -euo pipefail
@@ -50,16 +50,16 @@ chown -R builder:builder /home/builder/src
 su - builder -c "set -euo pipefail
   git config --global --add safe.directory /home/builder/src
   cd /home/builder/src
-  cmake_ver=\$(sed -n 's/^project(shinto-app VERSION \\([^ ]*\\).*/\\1/p' app/CMakeLists.txt)
+  cmake_ver=\$(sed -n 's/^project(ohm-browser VERSION \\([^ ]*\\).*/\\1/p' app/CMakeLists.txt)
   if [[ \$cmake_ver != '$ver' ]]; then
     echo \"CMakeLists version \$cmake_ver does not match tag $ver\" >&2
     exit 1
   fi
-  sed -i 's/^pkgver=.*/pkgver=$ver/' packaging/shinto/PKGBUILD
-  git archive --format=tar.gz --prefix=shinto-${ver}/ -o packaging/shinto/shinto-${ver}.tar.gz HEAD
-  cd packaging/shinto
+  sed -i 's/^pkgver=.*/pkgver=$ver/' packaging/ohm-browser/PKGBUILD
+  git archive --format=tar.gz --prefix=ohm-browser-${ver}/ -o packaging/ohm-browser/ohm-browser-${ver}.tar.gz HEAD
+  cd packaging/ohm-browser
   PKGEXT='.pkg.tar.zst' makepkg -f --noconfirm
 "
 
-install -d /src/packaging/shinto
-cp -a /home/builder/src/packaging/shinto/shinto-"$ver"-*.pkg.tar.* /src/packaging/shinto/
+install -d /src/packaging/ohm-browser
+cp -a /home/builder/src/packaging/ohm-browser/ohm-browser-"$ver"-*.pkg.tar.* /src/packaging/ohm-browser/

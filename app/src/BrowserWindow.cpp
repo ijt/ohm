@@ -37,13 +37,13 @@
 #include "PasskeyBroker.h"
 #include "PasskeyOverlay.h"
 #include "PermissionBar.h"
-#include "Shinto.h"
+#include "Ohm.h"
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
-bool isShintoShortcut(const QKeyEvent *ke, const QKeySequence &backShortcut) {
+bool isOhmShortcut(const QKeyEvent *ke, const QKeySequence &backShortcut) {
   // Alt+Left (Chromium's own back shortcut, and this app's default -- see
   // Config.h) is exactly the kind of thing a focused page/input can eat
   // via ShortcutOverride, same as Ctrl+T/N/L/K/W below -- e.g. some sites'
@@ -139,9 +139,9 @@ void givePageFocus(QWebEngineView *view) {
 
 // QWebEnginePage's default javaScriptConsoleMessage() prints every page's
 // own console.log/warn/error output to stderr -- fine for web development,
-// but Shinto is an app-mode browser, not a devtools console, and real
+// but Ohm is an app-mode browser, not a devtools console, and real
 // sites (YouTube included) constantly emit their own warnings that have
-// nothing to do with Shinto. Swallow it.
+// nothing to do with Ohm. Swallow it.
 class WebPage : public QWebEnginePage {
  public:
   using QWebEnginePage::QWebEnginePage;
@@ -191,7 +191,7 @@ class WebView : public QWebEngineView {
   bool event(QEvent *e) override {
     if (e->type() == QEvent::ShortcutOverride) {
       auto *ke = static_cast<QKeyEvent *>(e);
-      if (isShintoShortcut(ke, backShortcut_)) {
+      if (isOhmShortcut(ke, backShortcut_)) {
         e->ignore();
         return true;
       }
@@ -251,7 +251,7 @@ BrowserWindow *BrowserWindow::spawn(QWebEngineProfile *profile, HistoryStore *hi
   // become a window. QUrl("uninstall") is relative, WebEngine ignores it,
   // and the window sits on about:blank -- a blank white page.
   if (isShellCommand(url)) {
-    qWarning().noquote() << "shinto: ignoring command passed as a page:" << url;
+    qWarning().noquote() << "ohm: ignoring command passed as a page:" << url;
     return nullptr;
   }
   QString resolved = url;
@@ -290,7 +290,7 @@ BrowserWindow *BrowserWindow::spawnForRequest(QWebEngineProfile *profile, Histor
                                       /*showEmptyGate=*/false, /*mapWindow=*/false);
   const QUrl dest = request.requestedUrl();
   if (dest.isValid() && !dest.isEmpty() && dest != QUrl(QStringLiteral("about:blank"))) {
-    // Same loading gate as a CLI `shinto <url>`: destination visible,
+    // Same loading gate as a CLI `ohm <url>`: destination visible,
     // with the spinner, until the page paints. Empty requestedUrl (some OAuth
     // popups) stays overlay-hidden -- openIn() still has a real
     // WebContents, just no URL string we could honestly show.
@@ -323,7 +323,7 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
                               PopularDomains *domains, DownloadManager *downloads,
                               const QString &url, bool showEmptyGate)
     : history_(history), domains_(domains), downloads_(downloads), config_(loadConfig()) {
-  setWindowTitle(QStringLiteral("Shinto"));
+  setWindowTitle(QStringLiteral("Ohm"));
 
   auto *container = new QWidget(this);
   setCentralWidget(container);
@@ -390,16 +390,16 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
   connect(webView_->page(), &QWebEnginePage::titleChanged, this, [this](const QString &title) {
     // Hyprland group tabs (and the window decoration) read this title.
     // about:blank's own document title is the string "about:blank"; keep
-    // the empty gate labeled Shinto instead of that.
+    // the empty gate labeled Ohm instead of that.
     const bool internal = webView_->url().scheme() == QLatin1String("about");
-    setWindowTitle(title.isEmpty() || internal ? QStringLiteral("Shinto") : title);
+    setWindowTitle(title.isEmpty() || internal ? QStringLiteral("Ohm") : title);
     if (loadOk_) history_->recordVisit(webView_->url().toString(), title);
   });
   // The actual "was this visit real" gate: loadStarted resets it so a
   // pending navigation is never mistaken for its predecessor's success,
   // and loadFinished(true) is also where a search's typed query is first
   // recorded -- paired with the URL it actually landed on, not the one
-  // Shinto originally requested (see onOverlayNavigate()), since search
+  // Ohm originally requested (see onOverlayNavigate()), since search
   // engines routinely rewrite/redirect that URL before it commits.
   connect(webView_->page(), &QWebEnginePage::loadStarted, this, [this] { loadOk_ = false; });
   connect(webView_->page(), &QWebEnginePage::loadFinished, this, [this](bool ok) {
@@ -550,7 +550,7 @@ BrowserWindow::~BrowserWindow() {
 void BrowserWindow::changeEvent(QEvent *event) {
   if (event->type() == QEvent::ActivationChange && isActiveWindow()) {
     lastActive_ = this;
-    // Every Shinto window shares one pid and app_id, so "which Hyprland
+    // Every Ohm window shares one pid and app_id, so "which Hyprland
     // window is this" is only answerable while this one is focused. The
     // address is fixed for the window's life, so ask once. The reply is
     // kept only if this window is still the active one -- focus may have
@@ -590,7 +590,7 @@ void BrowserWindow::runCommand(const QString &name) {
   }
   const auto it = kCommands.constFind(name);
   if (it == kCommands.constEnd()) {
-    qWarning().noquote() << "shinto: unknown command:" << name;
+    qWarning().noquote() << "ohm: unknown command:" << name;
     return;
   }
   // The panel has just given keyboard focus back; make sure it lands on
@@ -715,13 +715,13 @@ void BrowserWindow::refreshDownloadBar() {
   }
 }
 
-void BrowserWindow::showDownloadsPanel() { shinto::showDownloadsPanel(); }
+void BrowserWindow::showDownloadsPanel() { ohm::showDownloadsPanel(); }
 
-void BrowserWindow::showShortcutsPanel() { shinto::showShortcutsPanel(); }
+void BrowserWindow::showShortcutsPanel() { ohm::showShortcutsPanel(); }
 
 void BrowserWindow::enterEmpty(bool showGate) {
   state_ = State::Empty;
-  setWindowTitle(QStringLiteral("Shinto"));
+  setWindowTitle(QStringLiteral("Ohm"));
   relayout();
   // A QWebEngineView that's never been navigated at all can make Qt
   // recreate the window's native surface once, shortly after this window
@@ -828,7 +828,7 @@ void BrowserWindow::onBackShortcut() {
   // enterEmpty() loads before any real navigation -- once that's the
   // *only* thing left behind the current page, canGoBack() is still true,
   // but actually going back would land on a blank page, not a previous
-  // one. A window opened directly with a URL (a CLI `shinto <url>`, an
+  // one. A window opened directly with a URL (a CLI `ohm <url>`, an
   // OAuth popup) has no about:blank at all, so canGoBack() is simply
   // false there. Either way, there's no real page to go back to, so just
   // do nothing -- popping open the location gate on a plain Alt+Left felt
@@ -919,4 +919,4 @@ void BrowserWindow::doFind(const QString &text, bool backward) {
   });
 }
 
-}  // namespace shinto
+}  // namespace ohm

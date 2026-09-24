@@ -1,8 +1,8 @@
 [package]
-name = "shinto-passkey"
+name = "ohm-browser-passkey"
 version = "0.1.0"
 edition = "2021"
-description = "Phone passkeys (WebAuthn hybrid transport) for Shinto, via libwebauthn"
+description = "Phone passkeys (WebAuthn hybrid transport) for Ohm, via libwebauthn"
 license = "LGPL-2.1-or-later"
 publish = false
 

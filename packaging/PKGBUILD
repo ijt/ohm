@@ -1,37 +1,38 @@
 # Maintainer: Isaac Turner <ijt@github>
 # AUR package for Omarchy's optional-browser path:
-#   omarchy-pkg-aur-add shinto-git
-# then `omarchy default browser shinto` (once Omarchy lists it).
+#   omarchy-pkg-aur-add ohm-browser-git
+# then `omarchy default browser ohm-browser` (once Omarchy lists it).
 
-pkgname=shinto-git
+pkgname=ohm-browser-git
 pkgver=0.0.1.r0.g0000000
 pkgrel=1
 pkgdesc="Page viewer for Omarchy — one window, one page; Hyprland is the tab bar"
 arch=('x86_64')
-url="https://github.com/ijt/shinto"
+url="https://github.com/ijt/ohm-browser"
 license=('MIT')
 depends=('qt6-base' 'qt6-webengine' 'lua54'
-         # shinto-passkey (phone passkeys): D-Bus/BlueZ, hidraw, rp.id checks
+         # ohm-browser-passkey (phone passkeys): D-Bus/BlueZ, hidraw, rp.id checks
          'dbus' 'systemd-libs' 'publicsuffix-list')
 optdepends=('bluez: phone passkeys (the phone proves it is nearby over Bluetooth)')
 makedepends=('git' 'cmake' 'cargo')
-# !lto: makepkg's -flto=auto turns shinto-passkey's C dependencies (ring)
+# !lto: makepkg's -flto=auto turns ohm-browser-passkey's C dependencies (ring)
 # into GCC LTO bitcode, which rustc's lld (the x86_64 default) can't link.
 options=('!lto')
-provides=('shinto')
-conflicts=('shinto')
-install=shinto-git.install
-source=("git+https://github.com/ijt/shinto.git")
+provides=('ohm-browser')
+conflicts=('ohm-browser' 'shinto' 'shinto-git')
+replaces=('shinto-git')
+install=ohm-browser-git.install
+source=("git+https://github.com/ijt/ohm-browser.git")
 sha256sums=('SKIP')
 
 pkgver() {
-  cd shinto
+  cd ohm-browser
   git describe --long --tags --abbrev=7 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' \
     || printf "0.0.1.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 build() {
-  cmake -S shinto/app -B build \
+  cmake -S ohm-browser/app -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr
   cmake --build build --parallel "$(nproc)"
@@ -39,14 +40,14 @@ build() {
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
-  install -Dm644 shinto/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 ohm-browser/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   # Optional Hyprland window rule for source-style installs; Omarchy PR
-  # should also tag `shinto` in default/hypr/apps/browser.lua.
-  install -Dm644 shinto/hypr.lua "$pkgdir/usr/share/shinto/hypr.lua"
-  install -Dm755 shinto/theme-set-hook.sh "$pkgdir/usr/share/shinto/theme-set-hook.sh"
+  # should also tag `ohm-browser` in default/hypr/apps/browser.lua.
+  install -Dm644 ohm-browser/hypr.lua "$pkgdir/usr/share/ohm-browser/hypr.lua"
+  install -Dm755 ohm-browser/theme-set-hook.sh "$pkgdir/usr/share/ohm-browser/theme-set-hook.sh"
   # Omarchy Quickshell panels (see downloads-panel/, shortcuts-panel/);
   # same "for source-style installs" caveat as hypr.lua above -- only
-  # `shinto install` (source-tree) actually registers them with Quickshell.
-  cp -r shinto/downloads-panel "$pkgdir/usr/share/shinto/downloads-panel"
-  cp -r shinto/shortcuts-panel "$pkgdir/usr/share/shinto/shortcuts-panel"
+  # `ohm install` (source-tree) actually registers them with Quickshell.
+  cp -r ohm-browser/downloads-panel "$pkgdir/usr/share/ohm-browser/downloads-panel"
+  cp -r ohm-browser/shortcuts-panel "$pkgdir/usr/share/ohm-browser/shortcuts-panel"
 }

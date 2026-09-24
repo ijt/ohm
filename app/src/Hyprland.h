@@ -1,4 +1,4 @@
-// Best-effort Hyprland compositor helpers. Shinto treats Hyprland groups
+// Best-effort Hyprland compositor helpers. Ohm treats Hyprland groups
 // as its tab bar; these talk to hyprctl so a new page can join the
 // current window's group. No-ops when hyprctl isn't there (not Hyprland,
 // or a session without it).
@@ -11,7 +11,7 @@
 class QObject;
 class QString;
 
-namespace shinto {
+namespace ohm {
 
 // If the compositor's active window isn't already in a group, toggle one
 // on it. Hyprland's default group.auto_group then inserts the next mapped
@@ -31,4 +31,4 @@ void queryActiveWindow(QObject *context,
 // window, e.g. it has since closed.
 bool focusWindow(const QString &address);
 
-}  // namespace shinto
+}  // namespace ohm

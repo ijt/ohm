@@ -2,9 +2,9 @@
 
 #include <QLocalSocket>
 
-#include "Shinto.h"
+#include "Ohm.h"
 
-namespace shinto {
+namespace ohm {
 
 bool SingletonClient::tryHandoff(const QString &commandLine, int timeoutMs) {
   QLocalSocket socket;
@@ -27,4 +27,4 @@ bool SingletonClient::tryHandoff(const QString &commandLine, int timeoutMs) {
   return true;
 }
 
-}  // namespace shinto
+}  // namespace ohm

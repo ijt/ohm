@@ -1,10 +1,10 @@
 // Phone passkeys: the WebAuthn "hybrid" transport, i.e. the QR code you
 // scan with a phone's camera, then Bluetooth proves the phone is nearby and
 // the phone signs in over Apple's or Google's relay. QtWebEngine has no UI
-// for it (see WebProfile.cpp's shim), so Shinto routes the ceremony itself:
+// for it (see WebProfile.cpp's shim), so Ohm routes the ceremony itself:
 //
-//   page JS (the shim) --fetch--> shinto-passkey: scheme --> this broker
-//     --stdin/stdout JSON--> shinto-passkey helper (libwebauthn, Rust)
+//   page JS (the shim) --fetch--> ohm-browser-passkey: scheme --> this broker
+//     --stdin/stdout JSON--> ohm-browser-passkey helper (libwebauthn, Rust)
 //
 // The origin a credential is for is never the page's word: it comes from
 // Chromium (QWebEngineUrlRequestJob::initiator()), and the helper checks
@@ -19,7 +19,7 @@
 class QWebEnginePage;
 class QWebEngineProfile;
 
-namespace shinto {
+namespace ohm {
 
 class PasskeyOverlay;
 
@@ -52,4 +52,4 @@ class PasskeyBroker : public QWebEngineUrlSchemeHandler {
   QHash<QString, QPointer<PasskeyOverlay>> overlays_;
 };
 
-}  // namespace shinto
+}  // namespace ohm

@@ -7,13 +7,13 @@ import qs.Commons
 import qs.Ui
 
 // Standalone summonable panel -- same "panel" kind contract as
-// shinto.downloads / omarchy.disk-speedtest: a plain Item exposing
+// ohm-browser.downloads / omarchy.disk-speedtest: a plain Item exposing
 // open(payloadJson)/close()/dismiss(), building its own PanelWindow overlay.
 // A cheatsheet that doubles as a command palette: typing filters the rows,
 // and Enter (or a click) runs the selected row's `command` via
-// `shinto --command <name>`, which the daemon runs in the last-focused
-// Shinto window (BrowserWindow::runCommand). Rows without a command, like
-// the Hyprland ones, are reference only. Ctrl+? / F1 in a Shinto window
+// `ohm --command <name>`, which the daemon runs in the last-focused
+// Ohm window (BrowserWindow::runCommand). Rows without a command, like
+// the Hyprland ones, are reference only. Ctrl+? / F1 in a Ohm window
 // toggles it (and the same keys dismiss it while focused here, since
 // Exclusive keyboard focus would otherwise eat the window-level shortcut).
 Item {
@@ -23,7 +23,7 @@ Item {
   property var manifest: null
   property bool opened: false
 
-  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "shinto.shortcuts"
+  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "ohm-browser.shortcuts"
   readonly property string fontFamily: Style.font.family
   // Typed filter. A leading ":" (vim habit) is ignored.
   readonly property string query: filterField.text.replace(/^:+/, "").trim().toLowerCase()
@@ -138,8 +138,8 @@ Item {
     // unloads it, which would take a still-starting Process with it (the
     // command then silently never reached the daemon). Launched before
     // the hide for the same reason; the daemon handles it after focus is
-    // back on the Shinto window either way.
-    Util.execArgv(["shinto", "--command", row.command])
+    // back on the Ohm window either way.
+    Util.execArgv(["ohm", "--command", row.command])
     root.dismiss()
   }
 
@@ -173,7 +173,7 @@ Item {
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.namespace: "shinto-shortcuts"
+    WlrLayershell.namespace: "ohm-browser-shortcuts"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 

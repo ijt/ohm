@@ -6,7 +6,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-namespace shinto {
+namespace ohm {
 
 // The QR code itself. Always black on white with a quiet zone, whatever the
 // theme: phone cameras are tuned for that, and inverted codes scan poorly.
@@ -168,4 +168,4 @@ void PasskeyOverlay::placeCard() {
   card_->move((width() - card_->width()) / 2, (height() - card_->height()) / 2);
 }
 
-}  // namespace shinto
+}  // namespace ohm

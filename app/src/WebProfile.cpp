@@ -9,9 +9,9 @@
 
 #include "DownloadManager.h"
 #include "PasskeyBroker.h"
-#include "Shinto.h"
+#include "Ohm.h"
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
@@ -35,7 +35,7 @@ namespace {
 // documents are simply skipped rather than guessed at.
 void installScrollbarHidingScript(QWebEngineProfile *profile) {
   QWebEngineScript script;
-  script.setName(QStringLiteral("shinto-hide-scrollbars"));
+  script.setName(QStringLiteral("ohm-hide-scrollbars"));
   script.setInjectionPoint(QWebEngineScript::DocumentReady);
   script.setWorldId(QWebEngineScript::MainWorld);
   script.setRunsOnSubFrames(true);
@@ -69,7 +69,7 @@ void installScrollbarHidingScript(QWebEngineProfile *profile) {
 //
 // So Qt's WebAuthn is never reached. Probes answer at once. publicKey
 // get/create go to PasskeyBroker, which runs the phone (hybrid) ceremony
-// itself, when the page has a broker token (window.__shintoPasskey, set by
+// itself, when the page has a broker token (window.__ohmPasskey, set by
 // a per-page script); without one they reject with NotSupportedError, what
 // Chromium reports when the API is disabled, which sites treat as "fall
 // back to a password" rather than "the user cancelled". Password-manager
@@ -87,7 +87,7 @@ void installScrollbarHidingScript(QWebEngineProfile *profile) {
 // layer deeper.
 void installWebAuthnShim(QWebEngineProfile *profile) {
   QWebEngineScript script;
-  script.setName(QStringLiteral("shinto-webauthn-shim"));
+  script.setName(QStringLiteral("ohm-webauthn-shim"));
   script.setInjectionPoint(QWebEngineScript::DocumentCreation);
   script.setWorldId(QWebEngineScript::MainWorld);
   script.setRunsOnSubFrames(true);
@@ -97,14 +97,14 @@ void installWebAuthnShim(QWebEngineProfile *profile) {
   var DOMException_ = DOMException, defineProperty = Object.defineProperty;
 
   // Read at call time: the per-page token script may run after this one.
-  function available() { return typeof window.__shintoPasskey === 'string'; }
+  function available() { return typeof window.__ohmPasskey === 'string'; }
 
   function notSupported() {
     return Promise.reject(new DOMException_('WebAuthn is not available.', 'NotSupportedError'));
   }
 
   function install(obj, name, fn) {
-    fn.__shinto = true;
+    fn.__ohm = true;
     try {
       defineProperty(obj, name, { value: fn, writable: true, configurable: true, enumerable: false });
     } catch (e) {
@@ -113,7 +113,7 @@ void installWebAuthnShim(QWebEngineProfile *profile) {
   }
 
   function stub(obj, name, value) {
-    if (!obj || typeof obj[name] !== 'function' || obj[name].__shinto) return;
+    if (!obj || typeof obj[name] !== 'function' || obj[name].__ohm) return;
     install(obj, name, function() {
       return Promise.resolve(typeof value === 'function' ? value() : value);
     });
@@ -235,10 +235,10 @@ void installWebAuthnShim(QWebEngineProfile *profile) {
       }
     } catch (e) {}
     var body = stringify({
-      token: window.__shintoPasskey, type: type, topOrigin: topOrigin,
+      token: window.__ohmPasskey, type: type, topOrigin: topOrigin,
       options: encode(options.publicKey)
     });
-    return fetch_.call(window, 'shinto-passkey:ceremony',
+    return fetch_.call(window, 'ohm-browser-passkey:ceremony',
                        { method: 'POST', body: body, signal: signal, credentials: 'omit' })
       .then(function(r) { return r.json(); })
       .then(function(reply) {
@@ -253,7 +253,7 @@ void installWebAuthnShim(QWebEngineProfile *profile) {
   }
 
   function routePublicKey(obj, name, type) {
-    if (!obj || typeof obj[name] !== 'function' || obj[name].__shinto) return;
+    if (!obj || typeof obj[name] !== 'function' || obj[name].__ohm) return;
     var real = obj[name];
     install(obj, name, function(options) {
       if (options && options.publicKey) {
@@ -275,7 +275,7 @@ void installWebAuthnShim(QWebEngineProfile *profile) {
   profile->scripts()->insert(script);
 }
 
-// Nothing in Shinto connected to QWebEngineProfile::downloadRequested, and
+// Nothing in Ohm connected to QWebEngineProfile::downloadRequested, and
 // an unhandled download just sits forever in the DownloadRequested state --
 // nothing is written to disk, and there's no error either, so a user
 // clicking a download link (confirmed concretely: a .dmg/.exe/.tar.gz from
@@ -298,7 +298,7 @@ QWebEngineProfile *createSharedProfile(QObject *parent, DownloadManager *downloa
   // Named, persistent (non-off-the-record) profile. QWebEngineProfile picks
   // sane cache/storage subpaths under persistentStoragePath by default; we
   // just point it at our own directory instead of Qt's default location.
-  auto *profile = new QWebEngineProfile(QStringLiteral("shinto"), parent);
+  auto *profile = new QWebEngineProfile(QStringLiteral("ohm-browser"), parent);
   profile->setPersistentStoragePath(storage);
   profile->setCachePath(storage + "/cache");
   profile->setPersistentCookiesPolicy(QWebEngineProfile::ForcePersistentCookies);
@@ -322,4 +322,4 @@ QWebEngineProfile *createSharedProfile(QObject *parent, DownloadManager *downloa
   return profile;
 }
 
-}  // namespace shinto
+}  // namespace ohm

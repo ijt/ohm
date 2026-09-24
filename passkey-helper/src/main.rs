@@ -1,8 +1,8 @@
-//! shinto-passkey: one WebAuthn ceremony with a phone over the hybrid
+//! ohm-browser-passkey: one WebAuthn ceremony with a phone over the hybrid
 //! transport (the QR code + Bluetooth flow Chrome calls "use a phone or
-//! tablet"), for Shinto's navigator.credentials shim.
+//! tablet"), for Ohm's navigator.credentials shim.
 //!
-//! Shinto starts one process per ceremony and writes a single JSON line to
+//! Ohm starts one process per ceremony and writes a single JSON line to
 //! stdin:
 //!
 //!   {"type": "create" | "get",
@@ -165,7 +165,7 @@ async fn run(req: Value) -> Result<Value, DomError> {
         None => false,
     };
     let options = options.to_string();
-    tracing::info!(%kind, origin = origin_str, %options, "shinto-passkey request");
+    tracing::info!(%kind, origin = origin_str, %options, "ohm-browser-passkey request");
 
     let psl = DatFilePublicSuffixList::from_system_file().map_err(|e| {
         dom("NotSupportedError", format!("public suffix list unavailable (install publicsuffix-list): {e}"))
@@ -248,11 +248,11 @@ async fn run(req: Value) -> Result<Value, DomError> {
 
 #[tokio::main]
 async fn main() {
-    // stderr reaches Shinto's journal (journalctl --user -u shinto.service).
-    // SHINTO_PASSKEY_LOG takes an env-filter, e.g. "libwebauthn=debug".
+    // stderr reaches Ohm's journal (journalctl --user -u ohm-browser.service).
+    // OHM_PASSKEY_LOG takes an env-filter, e.g. "libwebauthn=debug".
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_env("SHINTO_PASSKEY_LOG")
+            tracing_subscriber::EnvFilter::try_from_env("OHM_PASSKEY_LOG")
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
         )
         .with_writer(io::stderr)
@@ -271,7 +271,7 @@ async fn main() {
     match outcome {
         Ok(result) => emit(json!({"result": result})),
         Err(e) => {
-            tracing::warn!(name = e.name, message = %e.message, "shinto-passkey failed");
+            tracing::warn!(name = e.name, message = %e.message, "ohm-browser-passkey failed");
             emit(json!({"error": {"name": e.name, "message": e.message}}))
         }
     }

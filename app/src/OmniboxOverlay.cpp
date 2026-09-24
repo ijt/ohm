@@ -22,7 +22,7 @@
 #include "DownloadsPanelLauncher.h"
 #include "ReadlineEditing.h"
 
-namespace shinto {
+namespace ohm {
 
 // Accent-colored arc next to the URL, kept spinning until the gate hides.
 // Chromium's loadProgress hits 100% before it has a frame to paint, so the
@@ -91,7 +91,7 @@ constexpr int kApproxRowHeight = 30;
 }  // namespace
 
 OmniboxOverlay::OmniboxOverlay(HistoryStore *history, PopularDomains *domains,
-                                const ShintoConfig *config, QWidget *parent)
+                                const OhmConfig *config, QWidget *parent)
     : QWidget(parent), history_(history), domains_(domains), config_(config) {
   setObjectName(QStringLiteral("OmniboxOverlay"));
   // A plain QWidget doesn't paint its stylesheet background by default --
@@ -649,4 +649,4 @@ void OmniboxOverlay::clearSuggestions() {
   list_->hide();
 }
 
-}  // namespace shinto
+}  // namespace ohm

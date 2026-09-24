@@ -8,7 +8,7 @@
 
 #include "ReadlineEditing.h"
 
-namespace shinto {
+namespace ohm {
 
 FindBar::FindBar(QWidget *parent) : QWidget(parent) {
   setObjectName(QStringLiteral("FindBar"));
@@ -135,4 +135,4 @@ bool FindBar::eventFilter(QObject *obj, QEvent *event) {
   }
 }
 
-}  // namespace shinto
+}  // namespace ohm

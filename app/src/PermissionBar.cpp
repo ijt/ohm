@@ -5,9 +5,9 @@
 #include <QPushButton>
 #include <QSettings>
 
-#include "Shinto.h"
+#include "Ohm.h"
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
@@ -173,4 +173,4 @@ void PermissionBar::answer(bool allow) {
   showNext();
 }
 
-}  // namespace shinto
+}  // namespace ohm

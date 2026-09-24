@@ -13,7 +13,7 @@
 #include <QWebEngineNotification>
 #include <QWebEngineProfile>
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
@@ -24,7 +24,7 @@ QString writeIcon(const QImage &icon) {
   static int counter = 0;
   const QString dir = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
   if (dir.isEmpty()) return {};
-  const QString path = QDir(dir).filePath(QStringLiteral("shinto-notification-%1-%2.png")
+  const QString path = QDir(dir).filePath(QStringLiteral("ohm-notification-%1-%2.png")
                                               .arg(QCoreApplication::applicationPid())
                                               .arg(++counter));
   return icon.save(path, "PNG") ? path : QString();
@@ -117,4 +117,4 @@ void installNotificationPresenter(QWebEngineProfile *profile,
       [focusOrigin](std::unique_ptr<QWebEngineNotification> n) { present(std::move(n), focusOrigin); });
 }
 
-}  // namespace shinto
+}  // namespace ohm

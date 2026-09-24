@@ -11,7 +11,7 @@
 #include <QWebEnginePage>
 #include <QWebEngineView>
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
@@ -62,7 +62,7 @@ DevToolsWindow::DevToolsWindow(QWebEnginePage *inspected, std::function<void()> 
   });
 
   // The same keys that opened DevTools close it again from in here, like
-  // Chrome's; Ctrl+W as everywhere else in Shinto.
+  // Chrome's; Ctrl+W as everywhere else in Ohm.
   for (const QKeySequence &seq :
        {QKeySequence(Qt::Key_F12), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_I),
         QKeySequence(Qt::CTRL | Qt::Key_W)}) {
@@ -136,4 +136,4 @@ void DevToolsWindow::updateLabels() {
                           .arg(title, inspected_->url().toString()));
 }
 
-}  // namespace shinto
+}  // namespace ohm

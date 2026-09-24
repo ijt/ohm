@@ -12,7 +12,7 @@
 class QLineEdit;
 class QKeyEvent;
 
-namespace shinto {
+namespace ohm {
 
 // True if `key` is one of the combos this module knows how to handle at
 // all, regardless of whether the caller is going to apply the edit right
@@ -29,4 +29,4 @@ bool isReadlineEditKey(const QKeyEvent *key);
 // isReadlineEditKey(key); behavior for any other key is undefined.
 void applyReadlineEdit(QLineEdit *edit, const QKeyEvent *key);
 
-}  // namespace shinto
+}  // namespace ohm

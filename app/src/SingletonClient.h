@@ -5,7 +5,7 @@
 
 #include <QString>
 
-namespace shinto {
+namespace ohm {
 
 class SingletonClient {
  public:
@@ -16,4 +16,4 @@ class SingletonClient {
   static bool tryHandoff(const QString &commandLine, int timeoutMs = 200);
 };
 
-}  // namespace shinto
+}  // namespace ohm

@@ -1,13 +1,13 @@
-# Shinto
+# Ohm
 
-Shinto is built for [Omarchy](https://omarchy.org). It should also work on
+Ohm is built for [Omarchy](https://omarchy.org). It should also work on
 other Arch-based setups that have:
 
 - **Hyprland** with a Lua config (`~/.config/hypr/hyprland.lua`). Hyprland
-  groups serve as Shinto's tabs.
+  groups serve as Ohm's tabs.
 - **pacman**, which the installer uses to fetch Qt 6 WebEngine, CMake, and
   Lua 5.4.
-- **systemd user services**, which keep Shinto's warm daemon running.
+- **systemd user services**, which keep Ohm's warm daemon running.
 
 Omarchy also provides the theme syncing and the Quickshell downloads and
 shortcuts panels. Without Omarchy, the installer skips those parts.
@@ -15,30 +15,30 @@ shortcuts panels. Without Omarchy, the installer skips those parts.
 ## Quick Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ijt/ohm-browser/main/install.sh | bash
 ```
 
-![Chromium (left) vs. Shinto (right), both on omarchy.org with Hacker News in a second tab](docs/chrome-vs-shinto.png)
-*Chromium on the left, Shinto on the right. Same two tabs; in Shinto they're a Hyprland group.*
+![Chromium (left) vs. Ohm (right), both on omarchy.org with Hacker News in a second tab](docs/chrome-vs-ohm.png)
+*Chromium on the left, Ohm on the right. Same two tabs; in Ohm they're a Hyprland group.*
 
-*Chromium has too much chrome. Zen is a step closer, but Shinto lets Hyprland take us a step beyond.*
+*Chromium has too much chrome. Zen is a step closer, but Ohm lets Hyprland take us a step beyond.*
 
-Most web browsers have tabs and sometimes even window splitting to work around not having those in the host window system. In Omarchy, we have a great window manager Hyprland with tiling and tabs, so why does the browser need to have its own tabs? It doesn't! That's why Shinto doesn't have them, or anything else that gets in the way of you enjoying your pages.
+Most web browsers have tabs and sometimes even window splitting to work around not having those in the host window system. In Omarchy, we have a great window manager Hyprland with tiling and tabs, so why does the browser need to have its own tabs? It doesn't! That's why Ohm doesn't have them, or anything else that gets in the way of you enjoying your pages.
 
 ## Why it starts quickly
 
-The app itself is the warm daemon — no separate hidden window needed to keep it alive. `shinto.service` runs it with zero windows open; opening a page asks the already-running process for a new window over a local socket. Warm opens measure well under 150ms, not seconds.
+The app itself is the warm daemon — no separate hidden window needed to keep it alive. `ohm-browser.service` runs it with zero windows open; opening a page asks the already-running process for a new window over a local socket. Warm opens measure well under 150ms, not seconds.
 
-## What Shinto is (and is not)
+## What Ohm is (and is not)
 
 | Is | Is not |
 |----|--------|
 | Default browser (links, Super+Shift+B once set) | An extension platform |
 | One window per page; Hyprland groups are tabs | A full Chrome/Firefox replacement for every workflow |
 | Theme-aware omnibox via Omarchy hooks | |
-| A web app host (`shinto --app=URL`: permission prompts, notifications, screen sharing) | |
+| A web app host (`ohm --app=URL`: permission prompts, notifications, screen sharing) | |
 
-Omarchy's `omarchy-launch-webapp` still sends web apps to Chromium unless your default browser is on its list; Shinto isn't on it yet. Chromium remains the right tool for Chromium extensions. Shinto is for the web on a tiling compositor.
+Omarchy's `omarchy-launch-webapp` still sends web apps to Chromium unless your default browser is on its list; Ohm isn't on it yet. Chromium remains the right tool for Chromium extensions. Ohm is for the web on a tiling compositor.
 
 ## Install
 
@@ -46,100 +46,100 @@ Omarchy's `omarchy-launch-webapp` still sends web apps to Chromium unless your d
 
 The [Quick Install](#quick-install) command above runs
 [`install.sh`](install.sh), which installs any missing packages via `pacman`
-(asking first), clones to `~/.local/share/shinto/src` (or updates it if
+(asking first), clones to `~/.local/share/ohm-browser/src` (or updates it if
 it's already there -- re-running the command later is how you upgrade),
-checks out the newest [release](https://github.com/ijt/shinto/releases),
+checks out the newest [release](https://github.com/ijt/ohm-browser/releases),
 and does exactly what "From source" below does. Read it before piping it
 into `bash` if you'd rather not take that on faith.
 
-To install something other than the newest release, set `SHINTO_REF` to
+To install something other than the newest release, set `OHM_REF` to
 a tag, branch or commit. For the latest unreleased code:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | SHINTO_REF=main bash
+curl -fsSL https://raw.githubusercontent.com/ijt/ohm-browser/main/install.sh | OHM_REF=main bash
 ```
 
 ### From source (Omarchy / Hyprland)
 
 ```bash
-git clone https://github.com/ijt/shinto.git
-cd shinto
+git clone https://github.com/ijt/ohm-browser.git
+cd ohm-browser
 cmake -S app -B app/build
 cmake --build app/build
-./shinto install
+./ohm install
 ```
 
-`./shinto install` will:
+`./ohm install` will:
 
-- symlink `~/.local/bin/shinto`
+- symlink `~/.local/bin/ohm`
 - install the downloads view -- an Omarchy Quickshell panel (see
   [`downloads-panel/`](downloads-panel/)) opened by clicking the bottom
   progress bar -- into
-  `~/.config/omarchy/plugins/shinto-downloads` and enable it
+  `~/.config/omarchy/plugins/ohm-browser-downloads` and enable it
 - install the shortcuts cheatsheet -- another Quickshell panel (see
   [`shortcuts-panel/`](shortcuts-panel/)) opened with `Ctrl+?` or `F1` --
-  into `~/.config/omarchy/plugins/shinto-shortcuts` and enable it
+  into `~/.config/omarchy/plugins/ohm-browser-shortcuts` and enable it
 - restart the Omarchy shell if either panel changed since the last install,
   since a running shell keeps showing the old one
-- enable `shinto.service` so the daemon is warm after login
-- rebind `Super + Shift + Return` to Shinto and `Super + Shift + Y` to YouTube in Shinto
-- tag Shinto windows like other Chromium-family browsers
-- ask (once, on first install) whether to make Shinto the default for links and `Super + Shift + B`
+- enable `ohm-browser.service` so the daemon is warm after login
+- rebind `Super + Shift + Return` to Ohm and `Super + Shift + Y` to YouTube in Ohm
+- tag Ohm windows like other Chromium-family browsers
+- ask (once, on first install) whether to make Ohm the default for links and `Super + Shift + B`
 
-You can also opt in later with `shinto default`.
+You can also opt in later with `ohm default`.
 
 ```bash
-./shinto uninstall   # data is left in ~/.local/share/shinto
+./ohm uninstall   # data is left in ~/.local/share/ohm-browser
 ```
 
 ### Packaged (Arch / Omarchy)
 
-Download the latest `shinto-*-x86_64.pkg.tar.zst` from
-[Releases](https://github.com/ijt/shinto/releases) and:
+Download the latest `ohm-browser-*-x86_64.pkg.tar.zst` from
+[Releases](https://github.com/ijt/ohm-browser/releases) and:
 
 ```bash
-sudo pacman -U shinto-*-x86_64.pkg.tar.zst
-systemctl --user enable --now shinto.service
+sudo pacman -U ohm-browser-*-x86_64.pkg.tar.zst
+systemctl --user enable --now ohm-browser.service
 ```
 
-A rolling `shinto-git` PKGBUILD lives in [`packaging/`](packaging/). Build/install from a clone:
+A rolling `ohm-browser-git` PKGBUILD lives in [`packaging/`](packaging/). Build/install from a clone:
 
 ```bash
 cd packaging
 makepkg -si
-systemctl --user enable --now shinto.service
-xdg-settings set default-web-browser shinto.desktop
+systemctl --user enable --now ohm-browser.service
+xdg-settings set default-web-browser ohm-browser.desktop
 ```
 
-Once Omarchy lists Shinto under *Install > Browser*, the intended path is:
+Once Omarchy lists Ohm under *Install > Browser*, the intended path is:
 
 ```bash
-omarchy install browser shinto
-omarchy default browser shinto
+omarchy install browser ohm
+omarchy default browser ohm
 ```
 
 ### System install layout (`cmake --install`)
 
 ```
-/usr/bin/shinto
-/usr/lib/shinto/shinto-bin
-/usr/lib/shinto/shinto-passkey
-/usr/share/applications/shinto.desktop
-/usr/share/icons/hicolor/128x128/apps/shinto.png
-/usr/share/shinto/downloads-panel/
-/usr/share/shinto/shortcuts-panel/
-/usr/lib/systemd/user/shinto.service
+/usr/bin/ohm
+/usr/lib/ohm-browser/ohm-browser-bin
+/usr/lib/ohm-browser/ohm-browser-passkey
+/usr/share/applications/ohm-browser.desktop
+/usr/share/icons/hicolor/128x128/apps/ohm.png
+/usr/share/ohm-browser/downloads-panel/
+/usr/share/ohm-browser/shortcuts-panel/
+/usr/lib/systemd/user/ohm-browser.service
 ```
 
-The Quickshell panels at `/usr/share/shinto/downloads-panel/` and
-`/usr/share/shinto/shortcuts-panel/` are only staged there by packaged
-installs, same as `hypr.lua` -- `./shinto install` (source-tree only) is
+The Quickshell panels at `/usr/share/ohm-browser/downloads-panel/` and
+`/usr/share/ohm-browser/shortcuts-panel/` are only staged there by packaged
+installs, same as `hypr.lua` -- `./ohm install` (source-tree only) is
 what actually copies plugins into `~/.config/omarchy/plugins/` and enables
 them with Quickshell.
 
 ## Keys
 
-Browser (inside a Shinto window):
+Browser (inside a Ohm window):
 
 | Key | Action |
 |-----|--------|
@@ -168,7 +168,7 @@ Hyprland groups (these are the tabs):
 ## Phone passkeys
 
 Sign in with a passkey on your phone, the same QR-code flow Chrome calls
-"use a phone or tablet". When a site asks for a passkey, Shinto shows a QR
+"use a phone or tablet". When a site asks for a passkey, Ohm shows a QR
 code; scan it with your iPhone's or Android phone's camera and approve with
 Face ID or your fingerprint. That covers passkeys kept in iCloud Keychain,
 Google Password Manager, or a password manager on the phone (1Password,
@@ -183,16 +183,16 @@ Bitwarden, ...). Tested with Google, X, and GitHub on an iPhone.
 - The rest travels through Apple's or Google's relay, end-to-end encrypted,
   the same way it does for Chrome.
 
-This is `shinto-passkey`, a small Rust helper built on
+This is `ohm-browser-passkey`, a small Rust helper built on
 [libwebauthn](https://github.com/linux-credentials/libwebauthn) (LGPL-2.1+)
-that the build compiles when `cargo` is installed. Shinto takes the site's
+that the build compiles when `cargo` is installed. Ohm takes the site's
 origin from the browser engine, never from the page, and the helper checks
 the passkey's site against it. Not yet: passkey autofill in username
 fields, and "remember this phone".
 
 ## Configuration
 
-Shinto reads `~/.config/shinto/config.lua` (a real Lua file, executed with an embedded Lua 5.4 interpreter) fresh every time a new window opens — no restart needed, even against a daemon that's been running for days; just open a new window (`Ctrl+T`/`Ctrl+N`, or `Super+Shift+Return`) after editing the file. Two settings so far:
+Ohm reads `~/.config/ohm-browser/config.lua` (a real Lua file, executed with an embedded Lua 5.4 interpreter) fresh every time a new window opens — no restart needed, even against a daemon that's been running for days; just open a new window (`Ctrl+T`/`Ctrl+N`, or `Super+Shift+Return`) after editing the file. Two settings so far:
 
 ```lua
 -- Search fallback for whatever the omnibox doesn't recognize as a URL.
@@ -223,6 +223,6 @@ It's real Lua, so either setting can be computed however you like (env vars via 
 
 ## Notes
 
-- Dedicated QtWebEngine profile at `~/.local/share/shinto/profile/webengine` — your main Chromium logins are untouched.
+- Dedicated QtWebEngine profile at `~/.local/share/ohm-browser/profile/webengine` — your main Chromium logins are untouched.
 - `Ctrl+T` opens a new empty page in the same Hyprland group as this window (and makes a group if there isn't one yet). `Ctrl+N` opens a new empty window of its own. `Ctrl+L` edits the address in this window, whole address selected. Escape goes back. On the empty gate, Ctrl+L is a no-op.
-- `Super + Shift + B` stays Omarchy's default-browser launcher (`omarchy-launch-browser` / XDG) until you say yes at install time, or run `shinto default` / `omarchy default browser shinto`.
+- `Super + Shift + B` stays Omarchy's default-browser launcher (`omarchy-launch-browser` / XDG) until you say yes at install time, or run `ohm default` / `omarchy default browser ohm`.

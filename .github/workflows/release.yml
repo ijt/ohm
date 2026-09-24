@@ -1,7 +1,7 @@
 # Arch packages for GitHub Releases. Fires only on a pushed v* tag --
 # ordinary pushes to main do not build Qt or produce a .pkg.tar.zst.
 #
-#   git tag -a v0.0.3 -m "Shinto 0.0.3"
+#   git tag -a v0.0.3 -m "Ohm 0.0.3"
 #   git push origin v0.0.3
 #
 # Each arch builds in a native runner (no qemu). x86_64 uses the official
@@ -50,7 +50,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: pkg-${{ matrix.arch }}
-          path: packaging/shinto/shinto-*.pkg.tar.*
+          path: packaging/ohm-browser/ohm-browser-*.pkg.tar.*
           if-no-files-found: error
 
   release:

@@ -1,5 +1,5 @@
 // Daemon-side half of the singleton handoff. Listens on
-// shinto::singletonSocketPath() for line commands from SingletonClient.
+// ohm::singletonSocketPath() for line commands from SingletonClient.
 // Replaces control-server.py's /open endpoint and Chromium's own
 // SingletonSocket/SingletonLock.
 #pragma once
@@ -9,7 +9,7 @@
 
 class QLocalServer;
 
-namespace shinto {
+namespace ohm {
 
 class SingletonServer : public QObject {
   Q_OBJECT
@@ -17,7 +17,7 @@ class SingletonServer : public QObject {
  public:
   explicit SingletonServer(QObject *parent = nullptr);
 
-  // Starts listening at shinto::singletonSocketPath(), clearing any stale
+  // Starts listening at ohm::singletonSocketPath(), clearing any stale
   // socket file left by an unclean shutdown first. Returns false on failure
   // (e.g. another daemon is genuinely already running).
   bool listen();
@@ -35,7 +35,7 @@ class SingletonServer : public QObject {
   // other IPC with the daemon.
   void cancelDownloadRequested(int id);
   // "COMMAND <name>" -- the shortcuts panel's command palette (see
-  // shortcuts-panel/), via `shinto --command <name>`. Runs in the most
+  // shortcuts-panel/), via `ohm --command <name>`. Runs in the most
   // recently focused window; see BrowserWindow::runCommand().
   void commandRequested(const QString &name);
 
@@ -45,4 +45,4 @@ class SingletonServer : public QObject {
   QLocalServer *server_;
 };
 
-}  // namespace shinto
+}  // namespace ohm

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "id": "shinto.shortcuts",
-  "name": "Shinto Shortcuts",
+  "id": "ohm-browser.shortcuts",
+  "name": "Ohm Shortcuts",
   "version": "1.0.0",
-  "author": "Shinto",
+  "author": "Ohm",
   "license": "MIT",
-  "description": "Shinto's keyboard shortcuts and command palette. Summon with Ctrl+? or F1 in a Shinto window, or: omarchy-shell shell toggle shinto.shortcuts",
+  "description": "Ohm's keyboard shortcuts and command palette. Summon with Ctrl+? or F1 in a Ohm window, or: omarchy-shell shell toggle ohm-browser.shortcuts",
   "kinds": [
     "panel"
   ],

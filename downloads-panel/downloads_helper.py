@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Backend for the Shinto Downloads Quickshell panel.
+"""Backend for the Ohm Downloads Quickshell panel.
 
-Reads/mutates the same SQLite database Shinto's C++ DownloadManager writes
+Reads/mutates the same SQLite database Ohm's C++ DownloadManager writes
 (app/src/DownloadManager.cpp) and cancels downloads over the same
-shinto.sock protocol the old downloads-tui Go app used
+ohm-browser.sock protocol the old downloads-tui Go app used
 (downloads-tui/actions.go), so this is a drop-in replacement for that TUI's
 data layer. Service.qml shells out to this script rather than touching
 SQLite/sockets directly from QML.
@@ -11,7 +11,7 @@ SQLite/sockets directly from QML.
 Usage:
   downloads_helper.py list             -> JSON array of download rows
   downloads_helper.py clear-finished   -> delete all non-in-progress rows
-  downloads_helper.py cancel <id>      -> ask the Shinto daemon to cancel
+  downloads_helper.py cancel <id>      -> ask the Ohm daemon to cancel
   downloads_helper.py open <path>      -> xdg-open the finished file
   downloads_helper.py reveal <path>    -> reveal the file in a file manager
 """
@@ -36,7 +36,7 @@ STATE_CANCELLED = 3
 def data_home() -> Path:
     xdg = os.environ.get("XDG_DATA_HOME")
     base = Path(xdg) if xdg else Path.home() / ".local" / "share"
-    return base / "shinto"
+    return base / "ohm"
 
 
 def db_path() -> Path:
@@ -46,8 +46,8 @@ def db_path() -> Path:
 def socket_path() -> Path:
     runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
     if runtime_dir:
-        return Path(runtime_dir) / "shinto.sock"
-    return Path("/tmp/shinto.sock")
+        return Path(runtime_dir) / "ohm-browser.sock"
+    return Path("/tmp/ohm-browser.sock")
 
 
 def cmd_list() -> int:

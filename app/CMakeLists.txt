@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(shinto-app VERSION 0.2.1 LANGUAGES CXX)
+project(ohm-browser VERSION 0.2.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,14 +13,14 @@ endif()
 find_package(Qt6 REQUIRED COMPONENTS Widgets WebEngineWidgets Sql PrintSupport)
 
 find_package(PkgConfig REQUIRED)
-# Real Lua, not a hand-rolled parser -- ~/.config/shinto/config.lua (see
+# Real Lua, not a hand-rolled parser -- ~/.config/ohm-browser/config.lua (see
 # Config.h) is a real .lua file executed by this interpreter, so it can use
 # actual Lua (variables, conditionals, etc.), not just flat key = "value"
 # lines. Pinned to 5.4 (vs. the unversioned "lua" package, currently 5.5 on
 # this machine) for a stable, well-known embedding API.
 pkg_check_modules(LUA REQUIRED IMPORTED_TARGET lua5.4)
 
-qt_add_executable(shinto-bin
+qt_add_executable(ohm-browser-bin
   src/main.cpp
   src/Notify.cpp
   src/DownloadManager.cpp
@@ -44,10 +44,10 @@ qt_add_executable(shinto-bin
   src/Hyprland.cpp
   src/SingletonServer.cpp
   src/SingletonClient.cpp
-  resources/shinto.qrc
+  resources/ohm.qrc
 )
 
-target_link_libraries(shinto-bin PRIVATE
+target_link_libraries(ohm-browser-bin PRIVATE
   Qt6::Widgets
   Qt6::WebEngineWidgets
   Qt6::Sql
@@ -55,8 +55,8 @@ target_link_libraries(shinto-bin PRIVATE
   PkgConfig::LUA
 )
 
-target_compile_definitions(shinto-bin PRIVATE
-  SHINTO_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(ohm-browser-bin PRIVATE
+  OHM_VERSION="${PROJECT_VERSION}")
 
 # Unit tests: `ctest --test-dir app/build`. Packagers can pass
 # -DBUILD_TESTING=OFF to skip building them.
@@ -71,50 +71,53 @@ endif()
 
 include(GNUInstallDirs)
 
-# /usr/bin/shinto is the shell wrapper so `shinto uninstall` runs the
-# command instead of the browser. The ELF stays shinto-bin; naming it
-# `shinto` made `shinto uninstall` a URL, which paints a blank window.
-install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/../shinto"
+# /usr/bin/ohm is the shell wrapper so `ohm uninstall` runs the
+# command instead of the browser. The ELF stays ohm-browser-bin; naming it
+# `ohm` made `ohm uninstall` a URL, which paints a blank window.
+install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/../ohm"
   DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(PROGRAMS $<TARGET_FILE:shinto-bin>
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/shinto)
+install(PROGRAMS $<TARGET_FILE:ohm-browser-bin>
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/ohm-browser)
 
-# Phone passkeys (../passkey-helper): a Rust helper next to shinto-bin,
-# where PasskeyBroker looks for it. Without cargo, Shinto builds and runs
+# Phone passkeys (../passkey-helper): a Rust helper next to ohm-browser-bin,
+# where PasskeyBroker looks for it. Without cargo, Ohm builds and runs
 # as before, just without passkeys. Cargo keeps its own incremental state,
 # so the always-run target is a quick no-op when nothing changed.
-option(SHINTO_PASSKEYS "Build shinto-passkey for phone passkeys (needs cargo)" ON)
-if(SHINTO_PASSKEYS)
+option(OHM_PASSKEYS "Build ohm-browser-passkey for phone passkeys (needs cargo)" ON)
+if(OHM_PASSKEYS)
   find_program(CARGO_EXECUTABLE cargo)
   if(CARGO_EXECUTABLE)
     set(_passkey_src "${CMAKE_CURRENT_SOURCE_DIR}/../passkey-helper")
-    set(_passkey_bin "${CMAKE_CURRENT_BINARY_DIR}/shinto-passkey")
-    add_custom_target(shinto-passkey ALL
+    set(_passkey_bin "${CMAKE_CURRENT_BINARY_DIR}/ohm-browser-passkey")
+    add_custom_target(ohm-browser-passkey ALL
       COMMAND "${CARGO_EXECUTABLE}" build --release --locked
               --manifest-path "${_passkey_src}/Cargo.toml"
               --target-dir "${CMAKE_CURRENT_BINARY_DIR}/cargo"
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-              "${CMAKE_CURRENT_BINARY_DIR}/cargo/release/shinto-passkey" "${_passkey_bin}"
-      COMMENT "Building shinto-passkey (phone passkeys)"
+              "${CMAKE_CURRENT_BINARY_DIR}/cargo/release/ohm-browser-passkey" "${_passkey_bin}"
+      COMMENT "Building ohm-browser-passkey (phone passkeys)"
       USES_TERMINAL)
-    install(PROGRAMS "${_passkey_bin}" DESTINATION ${CMAKE_INSTALL_LIBDIR}/shinto)
+    install(PROGRAMS "${_passkey_bin}" DESTINATION ${CMAKE_INSTALL_LIBDIR}/ohm-browser)
   else()
-    message(WARNING "cargo not found: building without phone passkeys (shinto-passkey)")
+    message(WARNING "cargo not found: building without phone passkeys (ohm-browser-passkey)")
   endif()
 endif()
 
-set(_shinto_packaging_dir "${CMAKE_CURRENT_SOURCE_DIR}/../packaging")
-install(FILES "${_shinto_packaging_dir}/shinto.desktop"
+set(_ohm_packaging_dir "${CMAKE_CURRENT_SOURCE_DIR}/../packaging")
+install(FILES "${_ohm_packaging_dir}/ohm-browser.desktop"
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png"
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/128x128/apps
-  RENAME shinto.png)
+  RENAME ohm-browser.png)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.svg"
+  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps
+  RENAME ohm-browser.svg)
 
 # systemd user unit: ExecStart must match the install prefix (/usr for
 # packages, /usr/local for a plain cmake --install). The daemon is the ELF,
 # not the wrapper, so a packaged unit does not depend on the shell script.
-set(SHINTO_DAEMON_EXEC "${CMAKE_INSTALL_FULL_LIBDIR}/shinto/shinto-bin")
-configure_file("${_shinto_packaging_dir}/shinto.service.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/shinto.service" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/shinto.service"
+set(OHM_DAEMON_EXEC "${CMAKE_INSTALL_FULL_LIBDIR}/ohm-browser/ohm-browser-bin")
+configure_file("${_ohm_packaging_dir}/ohm-browser.service.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/ohm-browser.service" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ohm-browser.service"
   DESTINATION "lib/systemd/user")

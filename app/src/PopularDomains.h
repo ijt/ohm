@@ -8,7 +8,7 @@
 #include <QString>
 #include <QVector>
 
-namespace shinto {
+namespace ohm {
 
 class PopularDomains {
  public:
@@ -22,7 +22,7 @@ class PopularDomains {
   };
 
   // Loads and sorts the baked-in list once, along with any previously
-  // dismissed domains (shinto::dismissedDomainsPath()). Cheap enough
+  // dismissed domains (ohm::dismissedDomainsPath()). Cheap enough
   // (~100k short strings) to do synchronously at daemon startup.
   PopularDomains();
 
@@ -52,4 +52,4 @@ class PopularDomains {
   QSet<QString> dismissed_;
 };
 
-}  // namespace shinto
+}  // namespace ohm

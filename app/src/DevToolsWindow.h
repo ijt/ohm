@@ -1,6 +1,6 @@
 // Chromium's own DevTools (Elements, Console, Network, Sources, ...) for
 // one page, as its own top-level window. Chrome docks DevTools inside the
-// browser window because it has no window manager to lean on; Shinto
+// browser window because it has no window manager to lean on; Ohm
 // leaves placement to Hyprland, same as its tabs. DevTools' dock-side
 // buttons do nothing here -- docking is the host app's job in Qt, and
 // this host deliberately doesn't do it.
@@ -16,7 +16,7 @@ class QPushButton;
 class QWebEnginePage;
 class QWebEngineView;
 
-namespace shinto {
+namespace ohm {
 
 class DevToolsWindow : public QMainWindow {
   Q_OBJECT
@@ -44,4 +44,4 @@ class DevToolsWindow : public QMainWindow {
   QWebEngineView *view_;
 };
 
-}  // namespace shinto
+}  // namespace ohm

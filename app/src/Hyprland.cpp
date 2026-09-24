@@ -6,7 +6,7 @@
 #include <QRegularExpression>
 #include <QString>
 
-namespace shinto {
+namespace ohm {
 
 void ensureActiveWindowGrouped() {
   // Hyprland 0.56's dispatch surface is Lua (hl.dsp.*). A window's
@@ -56,4 +56,4 @@ bool focusWindow(const QString &address) {
   return proc.exitCode() == 0 && proc.readAllStandardOutput().trimmed() == "ok";
 }
 
-}  // namespace shinto
+}  // namespace ohm

@@ -1,7 +1,7 @@
 // CLI entry point and dual-mode dispatch: either hand a request off to an
-// already-running Shinto daemon (the common case -- a warm process just
+// already-running Ohm daemon (the common case -- a warm process just
 // opens another QMainWindow) or become the daemon. Replaces the bash
-// `shinto` script's open_page/ensure_daemon/run_daemon and Chromium's own
+// `ohm` script's open_page/ensure_daemon/run_daemon and Chromium's own
 // SingletonSocket.
 #include <QApplication>
 #include <QByteArray>
@@ -21,7 +21,7 @@
 #include "DownloadManager.h"
 #include "HistoryStore.h"
 #include "PopularDomains.h"
-#include "Shinto.h"
+#include "Ohm.h"
 #include "SingletonClient.h"
 #include "SingletonServer.h"
 #include "ThemeLoader.h"
@@ -35,18 +35,18 @@ QString openCommand(const QString &url) {
   return url.isEmpty() ? QStringLiteral("OPEN") : QStringLiteral("OPEN ") + url;
 }
 
-// Source-tree binary is <root>/app/build/shinto-bin and the wrapper is
-// <root>/shinto. A packaged binary lives in lib/shinto next to /usr/bin/shinto.
+// Source-tree binary is <root>/app/build/ohm-browser-bin and the wrapper is
+// <root>/ohm. A packaged binary lives in lib/ohm-browser next to /usr/bin/ohm.
 // Only a script (shebang) counts -- never re-exec this ELF.
 QString shellWrapperPath() {
   const QString exe = QFileInfo(QStringLiteral("/proc/self/exe")).canonicalFilePath();
   QStringList candidates;
   QDir dir(QFileInfo(exe).absolutePath());
   if (dir.cd(QStringLiteral("../.."))) {
-    candidates << dir.filePath(QStringLiteral("shinto"));
+    candidates << dir.filePath(QStringLiteral("ohm"));
   }
-  candidates << QDir::homePath() + QStringLiteral("/.local/bin/shinto");
-  candidates << QStringLiteral("/usr/bin/shinto");
+  candidates << QDir::homePath() + QStringLiteral("/.local/bin/ohm");
+  candidates << QStringLiteral("/usr/bin/ohm");
   for (const QString &candidate : candidates) {
     const QFileInfo info(candidate);
     if (!info.isFile() || !info.isExecutable()) continue;
@@ -59,25 +59,25 @@ QString shellWrapperPath() {
   return {};
 }
 
-// `shinto-bin uninstall` (and the packaged ELF named shinto) used to hand
+// `ohm-browser-bin uninstall` (and the packaged ELF named ohm) used to hand
 // the word to the daemon as a URL. Re-exec the wrapper so the command runs.
-// SHINTO_SUBCOMMAND_FORWARD breaks the loop if the wrapper execs us back.
+// OHM_SUBCOMMAND_FORWARD breaks the loop if the wrapper execs us back.
 bool forwardShellCommand(char **argv, const QString &cmd) {
-  if (qEnvironmentVariableIsSet("SHINTO_SUBCOMMAND_FORWARD")) {
-    std::fprintf(stderr, "shinto: '%s' is a command, not a page\n", qUtf8Printable(cmd));
+  if (qEnvironmentVariableIsSet("OHM_SUBCOMMAND_FORWARD")) {
+    std::fprintf(stderr, "ohm: '%s' is a command, not a page\n", qUtf8Printable(cmd));
     return false;
   }
   const QString wrapper = shellWrapperPath();
   if (wrapper.isEmpty()) {
     std::fprintf(stderr,
-                 "shinto: '%s' is a command, not a page. Run the shinto script.\n",
+                 "ohm: '%s' is a command, not a page. Run the ohm script.\n",
                  qUtf8Printable(cmd));
     return false;
   }
-  qputenv("SHINTO_SUBCOMMAND_FORWARD", "1");
+  qputenv("OHM_SUBCOMMAND_FORWARD", "1");
   const QByteArray path = wrapper.toLocal8Bit();
   execv(path.constData(), argv);
-  std::fprintf(stderr, "shinto: could not run %s\n", path.constData());
+  std::fprintf(stderr, "ohm: could not run %s\n", path.constData());
   return false;
 }
 
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
   // Chromium chooses its screen capturer from XDG_SESSION_TYPE: "wayland"
   // means PipeWire via the desktop portal (Hyprland's share picker);
   // anything else means X11 capture, which under XWayland shares a black
-  // screen. systemd user services get "unspecified", and shinto.service is
+  // screen. systemd user services get "unspecified", and ohm-browser.service is
   // how the daemon normally runs -- so say what the session really is.
   if (!qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY") &&
       qgetenv("XDG_SESSION_TYPE") != "wayland") {
@@ -163,30 +163,30 @@ int main(int argc, char *argv[]) {
   // to open a real window navigated to the literal string "--help", which
   // QtWebEngine renders as blank white (reproduced concretely: Super+Shift+B
   // showed nothing but blank white, while Super+Shift+Return -- which
-  // launches shinto directly, no probe -- worked fine). Print and exit
+  // launches ohm directly, no probe -- worked fine). Print and exit
   // before touching the daemon at all; stdout (not qInfo/qWarning, which
   // this Qt build routes to the journal by default, invisible to a pipe)
   // since the probe pipes it straight into grep.
   if (args.contains(QStringLiteral("--help")) || args.contains(QStringLiteral("-h"))) {
-    std::fputs("Usage: shinto [url]\n"
+    std::fputs("Usage: ohm [url]\n"
                "Page viewer for Omarchy -- one window, one page.\n",
                stdout);
     return 0;
   }
   if (args.contains(QStringLiteral("--version"))) {
-    std::fprintf(stdout, "shinto %s\n", SHINTO_VERSION);
+    std::fprintf(stdout, "ohm %s\n", OHM_VERSION);
     return 0;
   }
 
   // omarchy-launch-browser maps --private to --incognito/--inprivate and
-  // appends them before the URL. Shinto has no private profile yet, so drop
+  // appends them before the URL. Ohm has no private profile yet, so drop
   // the flags rather than treating them as a URL to open.
   args.removeAll(QStringLiteral("--incognito"));
   args.removeAll(QStringLiteral("--private"));
   args.removeAll(QStringLiteral("--inprivate"));
 
   // omarchy-launch-webapp runs the browser as `--app=URL` (Chromium's app
-  // mode). Every Shinto window is already chrome-less, so an app is just
+  // mode). Every Ohm window is already chrome-less, so an app is just
   // a page: take the URL and open it like any other.
   for (int i = 0; i < args.size(); ++i) {
     if (args.at(i).startsWith(QLatin1String("--app="))) {
@@ -197,11 +197,11 @@ int main(int argc, char *argv[]) {
   }
 
   if (args.removeOne(QStringLiteral("--theme"))) {
-    // `shinto theme` (the Omarchy theme-set hook): tell an already-running
+    // `ohm theme` (the Omarchy theme-set hook): tell an already-running
     // daemon to re-read colors.toml and re-apply it live. A no-op if
     // nothing's listening -- there's no daemon to theme.
     QCoreApplication probe(argc, argv);
-    shinto::SingletonClient::tryHandoff(QStringLiteral("THEME"));
+    ohm::SingletonClient::tryHandoff(QStringLiteral("THEME"));
     return 0;
   }
 
@@ -209,28 +209,28 @@ int main(int argc, char *argv[]) {
     // The shortcuts panel's command palette: run a named command (see
     // BrowserWindow::runCommand) in the daemon's last-focused window.
     if (i + 1 >= args.size()) {
-      std::fputs("shinto: --command needs a command name\n", stderr);
+      std::fputs("ohm: --command needs a command name\n", stderr);
       return 2;
     }
     QCoreApplication probe(argc, argv);
-    return shinto::SingletonClient::tryHandoff(QStringLiteral("COMMAND ") + args.at(i + 1)) ? 0 : 1;
+    return ohm::SingletonClient::tryHandoff(QStringLiteral("COMMAND ") + args.at(i + 1)) ? 0 : 1;
   }
 
   const bool forceDaemon = args.removeOne(QStringLiteral("--daemon"));
   const QString url = args.isEmpty() ? QString() : args.first();
 
-  if (!forceDaemon && shinto::isShellCommand(url)) {
+  if (!forceDaemon && ohm::isShellCommand(url)) {
     if (!forwardShellCommand(argv, url)) return 2;
   }
 
   if (!forceDaemon) {
     // Cheap path: a plain QCoreApplication is enough to drive the local
-    // socket handoff, so a `shinto <url>` invocation against an already
+    // socket handoff, so a `ohm <url>` invocation against an already
     // warm daemon never touches the GUI/Wayland platform plugin at all.
     bool handedOff = false;
     {
       QCoreApplication probe(argc, argv);
-      handedOff = shinto::SingletonClient::tryHandoff(openCommand(url));
+      handedOff = ohm::SingletonClient::tryHandoff(openCommand(url));
     }
     if (handedOff) {
       return 0;
@@ -239,10 +239,10 @@ int main(int argc, char *argv[]) {
 
   // No daemon answered (or --daemon forces this unconditionally): this
   // process becomes the daemon.
-  shinto::PasskeyBroker::registerScheme();  // Qt: before the QApplication.
+  ohm::PasskeyBroker::registerScheme();  // Qt: before the QApplication.
   QApplication app(argc, argv);
-  app.setApplicationName(QString::fromLatin1(shinto::kAppId));
-  app.setDesktopFileName(QString::fromLatin1(shinto::kAppId));
+  app.setApplicationName(QString::fromLatin1(ohm::kAppId));
+  app.setDesktopFileName(QString::fromLatin1(ohm::kAppId));
   // The whole point of dropping the old hidden spare-window trick: a warm
   // daemon with zero windows open is simply a QApplication that doesn't
   // quit when the last window closes.
@@ -250,45 +250,45 @@ int main(int argc, char *argv[]) {
 
   // Constructed before the profile: createSharedProfile() wires the
   // profile's downloadRequested signal straight to downloads.track().
-  shinto::DownloadManager downloads;
+  ohm::DownloadManager downloads;
   if (!downloads.open()) {
-    qWarning() << "shinto: continuing without persistent download history";
+    qWarning() << "ohm: continuing without persistent download history";
   }
-  QWebEngineProfile *profile = shinto::createSharedProfile(&app, &downloads);
-  shinto::installNotificationPresenter(profile, &shinto::BrowserWindow::focusWindowShowing);
+  QWebEngineProfile *profile = ohm::createSharedProfile(&app, &downloads);
+  ohm::installNotificationPresenter(profile, &ohm::BrowserWindow::focusWindowShowing);
 
-  shinto::HistoryStore history;
+  ohm::HistoryStore history;
   if (!history.open()) {
-    qWarning() << "shinto: continuing without persistent typed/visited history";
+    qWarning() << "ohm: continuing without persistent typed/visited history";
   }
-  shinto::PopularDomains domains;
+  ohm::PopularDomains domains;
 
-  shinto::BrowserWindow::applyPaletteToAll(shinto::loadPalette());
+  ohm::BrowserWindow::applyPaletteToAll(ohm::loadPalette());
 
-  shinto::SingletonServer server;
-  QObject::connect(&server, &shinto::SingletonServer::openRequested,
+  ohm::SingletonServer server;
+  QObject::connect(&server, &ohm::SingletonServer::openRequested,
                     [profile, &history, &domains, &downloads](const QString &openUrl) {
-                      shinto::BrowserWindow::spawn(profile, &history, &domains, &downloads, openUrl);
+                      ohm::BrowserWindow::spawn(profile, &history, &domains, &downloads, openUrl);
                     });
-  QObject::connect(&server, &shinto::SingletonServer::themeReloadRequested,
-                    [] { shinto::BrowserWindow::applyPaletteToAll(shinto::loadPalette()); });
-  QObject::connect(&server, &shinto::SingletonServer::commandRequested,
-                    &shinto::BrowserWindow::runCommand);
-  QObject::connect(&server, &shinto::SingletonServer::cancelDownloadRequested, &downloads,
-                    &shinto::DownloadManager::cancel);
+  QObject::connect(&server, &ohm::SingletonServer::themeReloadRequested,
+                    [] { ohm::BrowserWindow::applyPaletteToAll(ohm::loadPalette()); });
+  QObject::connect(&server, &ohm::SingletonServer::commandRequested,
+                    &ohm::BrowserWindow::runCommand);
+  QObject::connect(&server, &ohm::SingletonServer::cancelDownloadRequested, &downloads,
+                    &ohm::DownloadManager::cancel);
 
   if (!server.listen()) {
     // Lost a race with another process becoming the daemon in the tiny
     // window since our own handoff attempt failed above.
-    if (shinto::SingletonClient::tryHandoff(openCommand(url))) {
+    if (ohm::SingletonClient::tryHandoff(openCommand(url))) {
       return 0;
     }
-    qWarning() << "shinto: could not become the daemon and handoff failed";
+    qWarning() << "ohm: could not become the daemon and handoff failed";
     return 1;
   }
 
   if (!forceDaemon) {
-    shinto::BrowserWindow::spawn(profile, &history, &domains, &downloads, url);
+    ohm::BrowserWindow::spawn(profile, &history, &domains, &downloads, url);
   }
   // else: `--daemon` (the systemd unit) starts with zero windows, warm and
   // waiting for the first Super+Shift+Return handoff.

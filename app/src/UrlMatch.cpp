@@ -2,7 +2,7 @@
 
 #include <QRegularExpression>
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
@@ -60,4 +60,4 @@ UrlMatchTier matchUrl(const QString &target, const QString &needle) {
   return UrlMatchTier::None;
 }
 
-}  // namespace shinto
+}  // namespace ohm

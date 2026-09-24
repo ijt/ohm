@@ -18,7 +18,7 @@
 class QLabel;
 class QPushButton;
 
-namespace shinto {
+namespace ohm {
 
 class PermissionBar : public QWidget {
   Q_OBJECT
@@ -45,4 +45,4 @@ class PermissionBar : public QWidget {
   QPushButton *allow_;
 };
 
-}  // namespace shinto
+}  // namespace ohm

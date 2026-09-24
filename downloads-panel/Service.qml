@@ -2,8 +2,8 @@ import QtQuick
 import Quickshell.Io
 import "Model.js" as Model
 
-// Polls downloads_helper.py (which reads Shinto's downloads.sqlite and
-// dials shinto.sock) rather than touching SQLite or the socket from QML
+// Polls downloads_helper.py (which reads Ohm's downloads.sqlite and
+// dials ohm-browser.sock) rather than touching SQLite or the socket from QML
 // directly -- same shell-out-to-a-helper idiom as the Dropbox panel's
 // Service.qml.
 Item {

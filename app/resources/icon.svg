@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Ohm: Ω, the unit of resistance, in the Omarchy/Tokyo Night palette. -->
+  <rect x="0" y="0" width="128" height="128" rx="24" fill="#1a1b26"/>
+  <path d="M 29 97 H 48 V 88.6 A 32 32 0 1 1 80 88.6 V 97 H 99"
+        fill="none" stroke="#7aa2f7" stroke-width="10" stroke-linejoin="miter"/>
+</svg>

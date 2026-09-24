@@ -2236,7 +2236,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "shinto-passkey"
+name = "ohm-browser-passkey"
 version = "0.1.0"
 dependencies = [
  "libwebauthn",

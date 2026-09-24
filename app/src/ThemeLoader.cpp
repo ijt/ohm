@@ -6,9 +6,9 @@
 #include <QHash>
 #include <QTextStream>
 
-#include "Shinto.h"
+#include "Ohm.h"
 
-namespace shinto {
+namespace ohm {
 
 namespace {
 
@@ -116,4 +116,4 @@ QString Palette::toQss() const {
       .arg(bg, card, fg, muted, font, accent);
 }
 
-}  // namespace shinto
+}  // namespace ohm

@@ -9,7 +9,7 @@
 
 #include "UrlMatch.h"
 
-namespace shinto {
+namespace ohm {
 
 class HistoryStore : public QObject {
   Q_OBJECT
@@ -29,7 +29,7 @@ class HistoryStore : public QObject {
 
   explicit HistoryStore(QObject *parent = nullptr);
 
-  // Opens (creating if needed) the SQLite store at shinto::historyDbPath().
+  // Opens (creating if needed) the SQLite store at ohm::historyDbPath().
   // Returns false (and logs) if the SQLite driver / file can't be opened.
   bool open();
 
@@ -78,4 +78,4 @@ class HistoryStore : public QObject {
   static constexpr int kTypedMax = 300;
 };
 
-}  // namespace shinto
+}  // namespace ohm
