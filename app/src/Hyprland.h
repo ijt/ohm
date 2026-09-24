@@ -20,6 +20,13 @@ namespace ohm {
 // can still spawn the window.
 void ensureActiveWindowGrouped();
 
+// The flip side for Ctrl+N: auto_group would also drop that window into the
+// active window's group. If the active window is grouped, arms a one-shot
+// Lua window.open hook (registered on first use, and again after a config
+// reload wipes it) that moves the next Ohm window out of the group, so it
+// maps as its own tile. Call just before spawning.
+void ensureNextWindowStandalone();
+
 // Asks Hyprland, asynchronously, which window is active and calls `done`
 // with its address ("0x...") and client pid -- or an empty address if
 // hyprctl isn't there or fails. `done` is dropped if `context` dies first.

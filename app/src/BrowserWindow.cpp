@@ -768,6 +768,7 @@ void BrowserWindow::onOverlayCancelled() {
 }
 
 void BrowserWindow::onNewPageShortcut() {
+  ensureNextWindowStandalone();
   BrowserWindow::spawn(webView_->page()->profile(), history_, domains_, downloads_, QString());
 }
 

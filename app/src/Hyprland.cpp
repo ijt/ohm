@@ -20,7 +20,33 @@ void ensureActiveWindowGrouped() {
               QStringLiteral("local w = hl.get_active_window(); "
                              "if w and not w.group then "
                              "hl.dispatch(hl.dsp.group.toggle()) "
-                             "end")});
+                             "end; "
+                             // Disarm ensureNextWindowStandalone(): a Ctrl+N
+                             // whose window never opened must not pull this
+                             // new tab back out.
+                             "ohm_standalone_next = false")});
+  if (!proc.waitForFinished(500)) proc.kill();
+}
+
+void ensureNextWindowStandalone() {
+  // By window.open, auto_group has already put the window in the group,
+  // so the hook moves it straight back out. The flag is set synchronously
+  // before the spawn, so the hook can't miss the window; it only checks
+  // the class, since every Ohm window shares one app_id.
+  QProcess proc;
+  proc.start(QStringLiteral("hyprctl"),
+             {QStringLiteral("eval"),
+              QStringLiteral("if not ohm_standalone_hooked then "
+                             "ohm_standalone_hooked = true; "
+                             "hl.on('window.open', function(w) "
+                             "if ohm_standalone_next and w.class == 'ohm' then "
+                             "ohm_standalone_next = false; "
+                             "if w.group then hl.dispatch(hl.dsp.window.move("
+                             "{ out_of_group = true, window = 'address:' .. w.address })) end "
+                             "end end) "
+                             "end; "
+                             "local a = hl.get_active_window(); "
+                             "ohm_standalone_next = a ~= nil and a.group ~= nil")});
   if (!proc.waitForFinished(500)) proc.kill();
 }
 
