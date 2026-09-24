@@ -19,14 +19,29 @@ Add Shinto beside Firefox/Zen under **Install > Browser**, and list it under **S
 - `omarchy install browser shinto` → install AUR `shinto-git`, enable `shinto.service`
 - `omarchy default browser shinto` → XDG default for links / Super+Shift+B
 - Tag `shinto` in `default/hypr/apps/browser.lua` like other browsers
+- Add `shinto*` to the browsers `omarchy-launch-webapp` hands web apps to, so
+  web apps follow the default browser the way they do for Brave or Vivaldi:
+
+  ```diff
+  -google-chrome* | brave* | microsoft-edge* | opera* | vivaldi* | helium*) ;;
+  +google-chrome* | brave* | microsoft-edge* | opera* | vivaldi* | helium* | shinto*) ;;
+  ```
+
+  Shinto takes Chromium's `--app=URL`, and a Shinto window is already
+  chrome-less, so a web app is just a page. What web apps need works:
+  permission prompts (camera, mic, notifications, location; remembered per
+  site), desktop notifications through the notification daemon (a click
+  focuses the app's window), and screen sharing through
+  xdg-desktop-portal-hyprland's picker. `omarchy-launch-or-focus` finds
+  Shinto web apps by title, since titles are the page titles.
 
 ## Explicit non-goals for v1
 
 - **Do not** remove Chromium from the base system
-- **Do not** route Omarchy webapps through Shinto — `omarchy-launch-webapp` should keep using Chromium-family `--app=`
 - No extension store / Chrome Web Store story
 
-Shinto is a *page* browser. Chromium stays the webapp host and escape hatch.
+Chromium stays in the base system as the escape hatch (extensions, sites
+that need a full Chrome).
 
 ## Why this belongs in Omarchy
 

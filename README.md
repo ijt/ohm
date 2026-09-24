@@ -33,11 +33,12 @@ The app itself is the warm daemon — no separate hidden window needed to keep i
 
 | Is | Is not |
 |----|--------|
-| Default *page* browser (links, Super+Shift+B once set) | Omarchy webapp host (`--app=` stays on Chromium) |
-| One window per page; Hyprland groups are tabs | An extension platform |
-| Theme-aware omnibox via Omarchy hooks | A full Chrome/Firefox replacement for every workflow |
+| Default browser (links, Super+Shift+B once set) | An extension platform |
+| One window per page; Hyprland groups are tabs | A full Chrome/Firefox replacement for every workflow |
+| Theme-aware omnibox via Omarchy hooks | |
+| A web app host (`shinto --app=URL`: permission prompts, notifications, screen sharing) | |
 
-Chromium remains the right tool for Omarchy web apps and bundled Chromium extensions. Shinto is for reading the web on a tiling compositor.
+Omarchy's `omarchy-launch-webapp` still sends web apps to Chromium unless your default browser is on its list; Shinto isn't on it yet. Chromium remains the right tool for Chromium extensions. Shinto is for the web on a tiling compositor.
 
 ## Install
 
