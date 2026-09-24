@@ -149,6 +149,7 @@ Browser (inside a Shinto window):
 | `Ctrl + F` | Find in page. Enter/Shift+Enter or the ↓/↑ buttons step through matches, Escape closes it. |
 | `Ctrl + R` | Reload the page |
 | `Ctrl + =` / `Ctrl + -` | Zoom in / zoom out |
+| `F12` / `Ctrl + Shift + I` | Developer tools (Chromium's DevTools) in their own window; again to close. Right-click → Inspect jumps to an element. |
 | `Ctrl + W` / `Super + Q` | Close this page |
 | `Ctrl + ?` / `F1` | Shortcuts and command palette: type to filter (`reopen`, `zoom`), Enter runs it |
 
