@@ -144,7 +144,7 @@ void OmniboxOverlay::showGate(const QString &prefill) {
   progressBar_->hide();
   awaitingLoad_ = false;
   stopSpinner();
-  hintEnabled_ = prefill.isEmpty();
+  hintEnabled_ = true;
   layoutInput();
   show();
   raise();

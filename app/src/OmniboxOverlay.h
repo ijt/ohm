@@ -145,8 +145,8 @@ class OmniboxOverlay : public QWidget {
   QWidget *progressBar_;
   Spinner *spinner_;
   QLabel *hint_;
-  // Empty-gate only -- hidden for Ctrl+L / loading so it isn't chrome on
-  // an already-aimed window.
+  // On whenever the gate is idle (empty window or Ctrl+L); off while
+  // loading. Hidden anyway once suggestions appear.
   bool hintEnabled_ = false;
   // True between beginLoad() (overlay submit / showLoading) and the gate
   // going idle (showGate / hideOverlay). setProgress() no-ops unless this
