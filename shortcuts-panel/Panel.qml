@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
@@ -135,16 +134,13 @@ Item {
 
   function run(row) {
     if (!row || !row.command) return
-    // Hide first so keyboard focus is back on the Shinto window by the
-    // time the command runs there.
+    // Detached, not a Process child of this panel: hiding the panel
+    // unloads it, which would take a still-starting Process with it (the
+    // command then silently never reached the daemon). Launched before
+    // the hide for the same reason; the daemon handles it after focus is
+    // back on the Shinto window either way.
+    Util.execArgv(["shinto", "--command", row.command])
     root.dismiss()
-    runner.command = ["shinto", "--command", row.command]
-    runner.running = true
-  }
-
-  Process {
-    id: runner
-    command: []
   }
 
   function open(payloadJson) {
