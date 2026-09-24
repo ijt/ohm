@@ -30,6 +30,7 @@ qt_add_executable(shinto-bin
   src/ThemeLoader.cpp
   src/Config.cpp
   src/HistoryStore.cpp
+  src/UrlMatch.cpp
   src/PopularDomains.cpp
   src/OmniboxOverlay.cpp
   src/FindBar.cpp
@@ -51,6 +52,17 @@ target_link_libraries(shinto-bin PRIVATE
 
 target_compile_definitions(shinto-bin PRIVATE
   SHINTO_VERSION="${PROJECT_VERSION}")
+
+# Unit tests: `ctest --test-dir app/build`. Packagers can pass
+# -DBUILD_TESTING=OFF to skip building them.
+include(CTest)
+if(BUILD_TESTING)
+  find_package(Qt6 REQUIRED COMPONENTS Test)
+  qt_add_executable(url_match_test tests/UrlMatchTest.cpp src/UrlMatch.cpp)
+  target_include_directories(url_match_test PRIVATE src)
+  target_link_libraries(url_match_test PRIVATE Qt6::Core Qt6::Test)
+  add_test(NAME url_match COMMAND url_match_test)
+endif()
 
 include(GNUInstallDirs)
 
