@@ -7,7 +7,7 @@ pkgver=0.3.0
 pkgrel=1
 pkgdesc="A minimal web browser for Omarchy: one window per page, and Hyprland is the tab bar"
 arch=('x86_64' 'aarch64')
-url="https://github.com/ijt/ohm-browser"
+url="https://github.com/ijt/ohm"
 license=('MIT')
 depends=('qt6-base' 'qt6-webengine' 'lua54'
          # ohm-passkey (phone passkeys): D-Bus/BlueZ, hidraw, rp.id checks
@@ -25,14 +25,10 @@ source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 prepare() {
-  # GitHub's tag archive unpacks under the repo's name (ohm-browser-0.3.1);
-  # CI's git archive uses ohm-0.3.1.
-  local dir
-  for dir in "ohm-browser-$pkgver" "ohm-browser-v$pkgver" "$pkgname-v$pkgver"; do
-    if [[ -d "$srcdir/$dir" && ! -d "$srcdir/$pkgname-$pkgver" ]]; then
-      mv "$srcdir/$dir" "$srcdir/$pkgname-$pkgver"
-    fi
-  done
+  # GitHub's tag archive may unpack as ohm-v0.0.1; git archive uses ohm-0.0.1.
+  if [[ -d "$srcdir/$pkgname-v$pkgver" && ! -d "$srcdir/$pkgname-$pkgver" ]]; then
+    mv "$srcdir/$pkgname-v$pkgver" "$srcdir/$pkgname-$pkgver"
+  fi
 }
 
 build() {

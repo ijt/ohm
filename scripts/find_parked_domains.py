@@ -97,7 +97,7 @@ SHUTDOWN_CONTENT_SIGNATURES = [
 ]
 
 TIMEOUT = 6
-USER_AGENT = "Mozilla/5.0 (compatible; OhmParkedDomainAudit/1.0; +https://github.com/ijt/ohm-browser)"
+USER_AGENT = "Mozilla/5.0 (compatible; OhmParkedDomainAudit/1.0; +https://github.com/ijt/ohm)"
 
 
 def _fetch(domain):

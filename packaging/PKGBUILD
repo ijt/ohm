@@ -8,7 +8,7 @@ pkgver=0.0.1.r0.g0000000
 pkgrel=1
 pkgdesc="A minimal web browser for Omarchy: one window per page, and Hyprland is the tab bar"
 arch=('x86_64')
-url="https://github.com/ijt/ohm-browser"
+url="https://github.com/ijt/ohm"
 license=('MIT')
 depends=('qt6-base' 'qt6-webengine' 'lua54'
          # ohm-passkey (phone passkeys): D-Bus/BlueZ, hidraw, rp.id checks
@@ -23,8 +23,7 @@ conflicts=('ohm' 'ohm-browser' 'ohm-browser-git' 'shinto' 'shinto-git')
 # Earlier names: shinto-git until 0.3.0, ohm-browser-git for 0.3.0.
 replaces=('shinto-git' 'ohm-browser-git')
 install=ohm-git.install
-# Checked out as ohm/: the repo is ohm-browser, everything else is ohm.
-source=("ohm::git+https://github.com/ijt/ohm-browser.git")
+source=("git+https://github.com/ijt/ohm.git")
 sha256sums=('SKIP')
 
 pkgver() {

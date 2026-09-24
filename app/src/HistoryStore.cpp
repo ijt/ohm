@@ -22,7 +22,7 @@ namespace {
 // implied; other schemes stay visible so http:// / file:// don't look like
 // ordinary sites. A leading "www." is stripped either way, matching
 // PopularDomains' bare-domain labels. A path is kept, e.g.
-// "https://www.github.com/ijt/ohm-browser" -> "github.com/ijt/ohm-browser".
+// "https://www.github.com/ijt/ohm" -> "github.com/ijt/ohm".
 QString displayLabel(const QString &url) {
   static const QRegularExpression kHttps(
       QStringLiteral("^https://"), QRegularExpression::CaseInsensitiveOption);

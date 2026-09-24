@@ -8,7 +8,7 @@ apple.com
 googletagmanager.com
 microsoft.com
 github.com
-github.com/ijt/ohm-browser
+github.com/ijt/ohm
 omarchy.org
 wikipedia.org
 play.google.com

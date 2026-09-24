@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-line installer for Ohm on an Omarchy box:
 #
-#   curl -fsSL https://raw.githubusercontent.com/ijt/ohm-browser/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ijt/ohm/main/install.sh | bash
 #
 # Installs the newest release (the highest v* tag), not whatever is on
 # main. Set OHM_REF to a tag, branch or commit to install that instead,
@@ -23,7 +23,7 @@ if [[ $EUID -eq 0 ]]; then
 fi
 
 OHM_SRC="${OHM_SRC:-$HOME/.local/share/ohm/src}"
-REPO_URL="${OHM_REPO_URL:-https://github.com/ijt/ohm-browser.git}"
+REPO_URL="${OHM_REPO_URL:-https://github.com/ijt/ohm.git}"
 
 # Arch/Omarchy package names for everything CMakeLists.txt needs at build
 # time -- see packaging/PKGBUILD's own depends/makedepends for the subset of

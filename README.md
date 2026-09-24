@@ -13,7 +13,7 @@ with passkeys from your phone, notifications, screen sharing, and web apps.
 ## Quick Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ijt/ohm-browser/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ijt/ohm/main/install.sh | bash
 ```
 
 ![Chromium (left) vs. Ohm (right), both on omarchy.org with Hacker News in a second tab](docs/chrome-vs-ohm.png)
@@ -59,7 +59,7 @@ The [Quick Install](#quick-install) command above runs
 [`install.sh`](install.sh), which installs any missing packages via `pacman`
 (asking first), clones to `~/.local/share/ohm/src` (or updates it if
 it's already there -- re-running the command later is how you upgrade),
-checks out the newest [release](https://github.com/ijt/ohm-browser/releases),
+checks out the newest [release](https://github.com/ijt/ohm/releases),
 and does exactly what "From source" below does. Read it before piping it
 into `bash` if you'd rather not take that on faith.
 
@@ -67,13 +67,13 @@ To install something other than the newest release, set `OHM_REF` to
 a tag, branch or commit. For the latest unreleased code:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ijt/ohm-browser/main/install.sh | OHM_REF=main bash
+curl -fsSL https://raw.githubusercontent.com/ijt/ohm/main/install.sh | OHM_REF=main bash
 ```
 
 ### From source (Omarchy / Hyprland)
 
 ```bash
-git clone https://github.com/ijt/ohm-browser.git
+git clone https://github.com/ijt/ohm.git
 cd ohm
 cmake -S app -B app/build
 cmake --build app/build
@@ -106,7 +106,7 @@ You can also opt in later with `ohm default`.
 ### Packaged (Arch / Omarchy)
 
 Download the latest `ohm-*-x86_64.pkg.tar.zst` from
-[Releases](https://github.com/ijt/ohm-browser/releases) and:
+[Releases](https://github.com/ijt/ohm/releases) and:
 
 ```bash
 sudo pacman -U ohm-*-x86_64.pkg.tar.zst
