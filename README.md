@@ -18,8 +18,8 @@ shortcuts panels. Without Omarchy, the installer skips those parts.
 curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
 ```
 
-![Chrome (left) vs. Shinto (right) on the same page](docs/chrome-vs-shinto.png)
-*Chromium on the left, Shinto on the right.*
+![Chromium (left) vs. Shinto (right), both on omarchy.org with Hacker News in a second tab](docs/chrome-vs-shinto.png)
+*Chromium on the left, Shinto on the right. Same two tabs; in Shinto they're a Hyprland group.*
 
 *Chromium has too much chrome. Zen is a step closer, but Shinto lets Hyprland take us a step beyond.*
 
