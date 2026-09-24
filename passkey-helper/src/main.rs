@@ -150,6 +150,7 @@ async fn run(req: Value) -> Result<Value, DomError> {
         None => RequestOrigin::new(origin),
     };
     let options = req["options"].to_string();
+    tracing::info!(%kind, origin = origin_str, %options, "shinto-passkey request");
 
     let psl = DatFilePublicSuffixList::from_system_file().map_err(|e| {
         dom("NotSupportedError", format!("public suffix list unavailable (install publicsuffix-list): {e}"))
@@ -216,6 +217,17 @@ async fn run(req: Value) -> Result<Value, DomError> {
 
 #[tokio::main]
 async fn main() {
+    // stderr reaches Shinto's journal (journalctl --user -u shinto.service).
+    // SHINTO_PASSKEY_LOG takes an env-filter, e.g. "libwebauthn=debug".
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_env("SHINTO_PASSKEY_LOG")
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
+        )
+        .with_writer(io::stderr)
+        .without_time()
+        .init();
+
     let mut line = String::new();
     if io::stdin().lock().read_line(&mut line).is_err() {
         std::process::exit(2);
@@ -226,7 +238,10 @@ async fn main() {
     };
     match outcome {
         Ok(result) => emit(json!({"result": result})),
-        Err(e) => emit(json!({"error": {"name": e.name, "message": e.message}})),
+        Err(e) => {
+            tracing::warn!(name = e.name, message = %e.message, "shinto-passkey failed");
+            emit(json!({"error": {"name": e.name, "message": e.message}}))
+        }
     }
     // Background tunnel tasks may still be winding down; they have nothing
     // left to say.
