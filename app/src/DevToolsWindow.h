@@ -6,8 +6,13 @@
 // this host deliberately doesn't do it.
 #pragma once
 
+#include <functional>
+
 #include <QMainWindow>
 
+#include "ThemeLoader.h"
+
+class QPushButton;
 class QWebEnginePage;
 class QWebEngineView;
 
@@ -18,14 +23,24 @@ class DevToolsWindow : public QMainWindow {
 
  public:
   // Attaches to `inspected` for as long as this window lives. Deletes
-  // itself on close, which detaches.
-  explicit DevToolsWindow(QWebEnginePage *inspected);
+  // itself on close, which detaches. `focusPage` brings the inspected
+  // page's window to the front; the header strip calls it.
+  DevToolsWindow(QWebEnginePage *inspected, std::function<void()> focusPage);
   ~DevToolsWindow() override;
 
+  void applyPalette(const Palette &palette);
+
+ protected:
+  // Re-elides the header to its width.
+  bool eventFilter(QObject *obj, QEvent *event) override;
+
  private:
-  void updateTitle();
+  // Window title and header both name the page -- nothing else on screen
+  // ties this window to it, since Hyprland may tile it anywhere.
+  void updateLabels();
 
   QWebEnginePage *inspected_;
+  QPushButton *header_;
   QWebEngineView *view_;
 };
 

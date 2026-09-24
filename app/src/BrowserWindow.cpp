@@ -310,6 +310,7 @@ void BrowserWindow::applyPaletteToAll(const Palette &palette) {
   for (auto *w : instances_) {
     w->overlay_->applyPalette(palette);
     w->findBar_->applyPalette(palette);
+    if (w->devTools_) w->devTools_->applyPalette(palette);
   }
 }
 
@@ -531,7 +532,21 @@ BrowserWindow::~BrowserWindow() {
 }
 
 void BrowserWindow::changeEvent(QEvent *event) {
-  if (event->type() == QEvent::ActivationChange && isActiveWindow()) lastActive_ = this;
+  if (event->type() == QEvent::ActivationChange && isActiveWindow()) {
+    lastActive_ = this;
+    // Every Shinto window shares one pid and app_id, so "which Hyprland
+    // window is this" is only answerable while this one is focused. The
+    // address is fixed for the window's life, so ask once. The reply is
+    // kept only if this window is still the active one -- focus may have
+    // moved on while hyprctl ran.
+    if (hyprAddress_.isEmpty() && !hyprAddressPending_) {
+      hyprAddressPending_ = true;
+      queryActiveWindow(this, [this](const QString &address, qint64 pid) {
+        hyprAddressPending_ = false;
+        if (pid == QCoreApplication::applicationPid() && isActiveWindow()) hyprAddress_ = address;
+      });
+    }
+  }
   QMainWindow::changeEvent(event);
 }
 
@@ -588,15 +603,26 @@ void BrowserWindow::toggleDevTools() {
     devTools_->close();
     return;
   }
-  devTools_ = new DevToolsWindow(webView_->page());
+  openDevTools();
+}
+
+void BrowserWindow::openDevTools() {
+  if (devTools_) return;
+  devTools_ = new DevToolsWindow(webView_->page(), [this] { focusViaCompositor(); });
+  devTools_->applyPalette(currentPalette_);
   devTools_->show();
 }
 
+void BrowserWindow::focusViaCompositor() {
+  if (focusWindow(hyprAddress_)) return;
+  // Not on Hyprland, or the address was never learned: ask politely.
+  // Hyprland may only mark the window urgent rather than focus it.
+  raise();
+  activateWindow();
+}
+
 void BrowserWindow::inspectElement() {
-  if (!devTools_) {
-    devTools_ = new DevToolsWindow(webView_->page());
-    devTools_->show();
-  }
+  openDevTools();
   // Uses the position of the context menu that is still being handled.
   webView_->page()->triggerAction(QWebEnginePage::InspectElement);
 }

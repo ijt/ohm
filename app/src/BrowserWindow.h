@@ -150,6 +150,11 @@ class BrowserWindow : public QMainWindow {
   // The context menu's "Inspect": opens DevTools (if needed) and selects
   // the element under the menu in the Elements panel.
   void inspectElement();
+  // Opens (not toggles) this page's DevTools window.
+  void openDevTools();
+  // Brings this window to the front via Hyprland -- the DevTools header's
+  // click. A client can't raise itself on Wayland; Hyprland can.
+  void focusViaCompositor();
 
   HistoryStore *history_;
   PopularDomains *domains_;
@@ -177,6 +182,10 @@ class BrowserWindow : public QMainWindow {
   QPrinter *printer_ = nullptr;
   // Null until F12/Inspect; closes itself when this window's page goes.
   QPointer<DevToolsWindow> devTools_;
+  // This window's Hyprland address ("0x..."), learned the first time it's
+  // active (see changeEvent()); empty until then, or off Hyprland.
+  QString hyprAddress_;
+  bool hyprAddressPending_ = false;
 
   static QVector<BrowserWindow *> instances_;
   static BrowserWindow *lastActive_;
