@@ -21,9 +21,7 @@ curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
 ![Chrome (left) vs. Shinto (right) on the same page](docs/chrome-vs-shinto.png)
 *Chromium on the left, Shinto on the right.*
 
-*Chromium has too much chrome; Zen isn't as zen as Hyprland allows.*
-
-*Shinto renders unto the window management gods what is theirs.*
+*Chromium has too much chrome. Zen is a step closer, but Shinto lets Hyprland take us a step beyond.*
 
 Most web browsers have tabs and sometimes even window splitting to work around not having those in the host window system. In Omarchy, we have a great window manager hyprland with tiling and tabs, so why does the browser need to have its own tabs? It doesn't! That's why Shinto doesn't have them, or any other junk that gets in the way of you joyfully viewing your web pages.
 
