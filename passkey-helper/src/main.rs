@@ -1,4 +1,4 @@
-//! ohm-browser-passkey: one WebAuthn ceremony with a phone over the hybrid
+//! ohm-passkey: one WebAuthn ceremony with a phone over the hybrid
 //! transport (the QR code + Bluetooth flow Chrome calls "use a phone or
 //! tablet"), for Ohm's navigator.credentials shim.
 //!
@@ -165,7 +165,7 @@ async fn run(req: Value) -> Result<Value, DomError> {
         None => false,
     };
     let options = options.to_string();
-    tracing::info!(%kind, origin = origin_str, %options, "ohm-browser-passkey request");
+    tracing::info!(%kind, origin = origin_str, %options, "ohm-passkey request");
 
     let psl = DatFilePublicSuffixList::from_system_file().map_err(|e| {
         dom("NotSupportedError", format!("public suffix list unavailable (install publicsuffix-list): {e}"))
@@ -248,7 +248,7 @@ async fn run(req: Value) -> Result<Value, DomError> {
 
 #[tokio::main]
 async fn main() {
-    // stderr reaches Ohm's journal (journalctl --user -u ohm-browser.service).
+    // stderr reaches Ohm's journal (journalctl --user -u ohm.service).
     // OHM_PASSKEY_LOG takes an env-filter, e.g. "libwebauthn=debug".
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -271,7 +271,7 @@ async fn main() {
     match outcome {
         Ok(result) => emit(json!({"result": result})),
         Err(e) => {
-            tracing::warn!(name = e.name, message = %e.message, "ohm-browser-passkey failed");
+            tracing::warn!(name = e.name, message = %e.message, "ohm-passkey failed");
             emit(json!({"error": {"name": e.name, "message": e.message}}))
         }
     }

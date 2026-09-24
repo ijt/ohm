@@ -3,7 +3,7 @@
 
 Reads/mutates the same SQLite database Ohm's C++ DownloadManager writes
 (app/src/DownloadManager.cpp) and cancels downloads over the same
-ohm-browser.sock protocol the old downloads-tui Go app used
+ohm.sock protocol the old downloads-tui Go app used
 (downloads-tui/actions.go), so this is a drop-in replacement for that TUI's
 data layer. Service.qml shells out to this script rather than touching
 SQLite/sockets directly from QML.
@@ -46,8 +46,8 @@ def db_path() -> Path:
 def socket_path() -> Path:
     runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
     if runtime_dir:
-        return Path(runtime_dir) / "ohm-browser.sock"
-    return Path("/tmp/ohm-browser.sock")
+        return Path(runtime_dir) / "ohm.sock"
+    return Path("/tmp/ohm.sock")
 
 
 def cmd_list() -> int:

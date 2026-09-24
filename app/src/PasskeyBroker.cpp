@@ -22,7 +22,7 @@ namespace ohm {
 
 namespace {
 
-const QByteArray kScheme = QByteArrayLiteral("ohm-browser-passkey");
+const QByteArray kScheme = QByteArrayLiteral("ohm-passkey");
 
 // Long enough to find the phone and scan; Chrome's own hybrid default is
 // similar. The page's own `timeout` is advisory in the spec anyway.
@@ -173,9 +173,9 @@ QString PasskeyBroker::helperPath() {
   const QString dir = QCoreApplication::applicationDirPath();
   const QStringList candidates = {
       qEnvironmentVariable("OHM_PASSKEY_HELPER"),
-      // Built and installed next to ohm-browser-bin (see app/CMakeLists.txt).
-      dir + QStringLiteral("/ohm-browser-passkey"),
-      QStandardPaths::findExecutable(QStringLiteral("ohm-browser-passkey")),
+      // Built and installed next to ohm-bin (see app/CMakeLists.txt).
+      dir + QStringLiteral("/ohm-passkey"),
+      QStandardPaths::findExecutable(QStringLiteral("ohm-passkey")),
   };
   for (const QString &path : candidates) {
     if (!path.isEmpty() && QFileInfo(path).isExecutable()) return QFileInfo(path).canonicalFilePath();
@@ -190,7 +190,7 @@ void PasskeyBroker::attach(QWebEnginePage *page, PasskeyOverlay *overlay) {
   connect(page, &QObject::destroyed, this, [this, token] { overlays_.remove(token); });
 
   QWebEngineScript script;
-  script.setName(QStringLiteral("ohm-browser-passkey-token"));
+  script.setName(QStringLiteral("ohm-passkey-token"));
   script.setInjectionPoint(QWebEngineScript::DocumentCreation);
   script.setWorldId(QWebEngineScript::MainWorld);
   script.setRunsOnSubFrames(true);

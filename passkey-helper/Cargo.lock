@@ -2236,7 +2236,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohm-browser-passkey"
+name = "ohm-passkey"
 version = "0.1.0"
 dependencies = [
  "libwebauthn",

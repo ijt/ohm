@@ -22,7 +22,7 @@ if [[ $EUID -eq 0 ]]; then
   exit 1
 fi
 
-OHM_SRC="${OHM_SRC:-$HOME/.local/share/ohm-browser/src}"
+OHM_SRC="${OHM_SRC:-$HOME/.local/share/ohm/src}"
 REPO_URL="${OHM_REPO_URL:-https://github.com/ijt/ohm-browser.git}"
 
 # Arch/Omarchy package names for everything CMakeLists.txt needs at build
@@ -32,7 +32,7 @@ REPO_URL="${OHM_REPO_URL:-https://github.com/ijt/ohm-browser.git}"
 # default-generator `cmake -S/-B` + `cmake --build` the README's own "From
 # source" steps do.
 PACMAN_PKGS=(git cmake base-devel qt6-base qt6-webengine lua54)
-# Phone passkeys: ohm-browser-passkey is Rust, and checks sites against the
+# Phone passkeys: ohm-passkey is Rust, and checks sites against the
 # public suffix list. A rustup toolchain already on PATH is fine, and
 # pacman's rust would conflict with the rustup package, so only ask for
 # rust when there's no cargo at all.
@@ -138,7 +138,7 @@ echo "install.sh: running ./ohm install"
 # ./ohm install only enables+starts the service if it wasn't already
 # running -- an update re-run needs an explicit restart to actually pick
 # up the rebuilt binary, so just always do it.
-systemctl --user restart ohm-browser.service
+systemctl --user restart ohm.service
 
 echo
 echo "install.sh: done. Source lives at $OHM_SRC (re-run this script to update)."

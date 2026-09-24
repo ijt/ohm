@@ -1,5 +1,5 @@
 [package]
-name = "ohm-browser-passkey"
+name = "ohm-passkey"
 version = "0.1.0"
 edition = "2021"
 description = "Phone passkeys (WebAuthn hybrid transport) for Ohm, via libwebauthn"

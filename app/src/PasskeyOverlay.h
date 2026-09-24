@@ -29,7 +29,7 @@ class PasskeyOverlay : public QWidget {
   void begin(const QString &host, bool create);
   // `modules` is size*size '0'/'1' characters, row-major, '1' = dark.
   void showQr(int size, const QString &modules);
-  // A ohm-browser-passkey status word: proximity, connecting, authenticating,
+  // A ohm-passkey status word: proximity, connecting, authenticating,
   // connected, touch.
   void setStatus(const QString &status);
   // Hides the card. Does not emit cancelled().

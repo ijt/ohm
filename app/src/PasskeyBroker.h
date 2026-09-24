@@ -3,8 +3,8 @@
 // the phone signs in over Apple's or Google's relay. QtWebEngine has no UI
 // for it (see WebProfile.cpp's shim), so Ohm routes the ceremony itself:
 //
-//   page JS (the shim) --fetch--> ohm-browser-passkey: scheme --> this broker
-//     --stdin/stdout JSON--> ohm-browser-passkey helper (libwebauthn, Rust)
+//   page JS (the shim) --fetch--> ohm-passkey: scheme --> this broker
+//     --stdin/stdout JSON--> ohm-passkey helper (libwebauthn, Rust)
 //
 // The origin a credential is for is never the page's word: it comes from
 // Chromium (QWebEngineUrlRequestJob::initiator()), and the helper checks

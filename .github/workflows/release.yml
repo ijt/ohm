@@ -50,7 +50,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: pkg-${{ matrix.arch }}
-          path: packaging/ohm-browser/ohm-browser-*.pkg.tar.*
+          path: packaging/ohm/ohm-*.pkg.tar.*
           if-no-files-found: error
 
   release:

@@ -1,13 +1,13 @@
 # Ohm
 
-After any rebuild of `app/build/ohm-browser-bin`, deploy it and bounce the warm
+After any rebuild of `app/build/ohm-bin`, deploy it and bounce the warm
 daemon:
 
 ```
 ./ohm restart
 ```
 
-`ohm-browser.service` runs `~/.local/share/ohm-browser/src`, a separate clone. A rebuild
+`ohm.service` runs `~/.local/share/ohm/src`, a separate clone. A rebuild
 in this tree is invisible until `restart` copies the new binary over. Existing
 Ohm windows close with the old process.
 

@@ -26,7 +26,7 @@ windows well. Hyprland can, so Ohm leaves that job to it.
 
 ## Why it starts quickly
 
-The app itself is the warm daemon — no separate hidden window needed to keep it alive. `ohm-browser.service` runs it with zero windows open; opening a page asks the already-running process for a new window over a local socket. Warm opens measure well under 150ms, not seconds.
+The app itself is the warm daemon — no separate hidden window needed to keep it alive. `ohm.service` runs it with zero windows open; opening a page asks the already-running process for a new window over a local socket. Warm opens measure well under 150ms, not seconds.
 
 ## What Ohm is (and is not)
 
@@ -57,7 +57,7 @@ shortcuts panels. Without Omarchy, the installer skips those parts.
 
 The [Quick Install](#quick-install) command above runs
 [`install.sh`](install.sh), which installs any missing packages via `pacman`
-(asking first), clones to `~/.local/share/ohm-browser/src` (or updates it if
+(asking first), clones to `~/.local/share/ohm/src` (or updates it if
 it's already there -- re-running the command later is how you upgrade),
 checks out the newest [release](https://github.com/ijt/ohm-browser/releases),
 and does exactly what "From source" below does. Read it before piping it
@@ -74,7 +74,7 @@ curl -fsSL https://raw.githubusercontent.com/ijt/ohm-browser/main/install.sh | O
 
 ```bash
 git clone https://github.com/ijt/ohm-browser.git
-cd ohm-browser
+cd ohm
 cmake -S app -B app/build
 cmake --build app/build
 ./ohm install
@@ -86,13 +86,13 @@ cmake --build app/build
 - install the downloads view -- an Omarchy Quickshell panel (see
   [`downloads-panel/`](downloads-panel/)) opened by clicking the bottom
   progress bar -- into
-  `~/.config/omarchy/plugins/ohm-browser-downloads` and enable it
+  `~/.config/omarchy/plugins/ohm-downloads` and enable it
 - install the shortcuts cheatsheet -- another Quickshell panel (see
   [`shortcuts-panel/`](shortcuts-panel/)) opened with `Ctrl+?` or `F1` --
-  into `~/.config/omarchy/plugins/ohm-browser-shortcuts` and enable it
+  into `~/.config/omarchy/plugins/ohm-shortcuts` and enable it
 - restart the Omarchy shell if either panel changed since the last install,
   since a running shell keeps showing the old one
-- enable `ohm-browser.service` so the daemon is warm after login
+- enable `ohm.service` so the daemon is warm after login
 - rebind `Super + Shift + Return` to Ohm and `Super + Shift + Y` to YouTube in Ohm
 - tag Ohm windows like other Chromium-family browsers
 - ask (once, on first install) whether to make Ohm the default for links and `Super + Shift + B`
@@ -100,26 +100,26 @@ cmake --build app/build
 You can also opt in later with `ohm default`.
 
 ```bash
-./ohm uninstall   # data is left in ~/.local/share/ohm-browser
+./ohm uninstall   # data is left in ~/.local/share/ohm
 ```
 
 ### Packaged (Arch / Omarchy)
 
-Download the latest `ohm-browser-*-x86_64.pkg.tar.zst` from
+Download the latest `ohm-*-x86_64.pkg.tar.zst` from
 [Releases](https://github.com/ijt/ohm-browser/releases) and:
 
 ```bash
-sudo pacman -U ohm-browser-*-x86_64.pkg.tar.zst
-systemctl --user enable --now ohm-browser.service
+sudo pacman -U ohm-*-x86_64.pkg.tar.zst
+systemctl --user enable --now ohm.service
 ```
 
-A rolling `ohm-browser-git` PKGBUILD lives in [`packaging/`](packaging/). Build/install from a clone:
+A rolling `ohm-git` PKGBUILD lives in [`packaging/`](packaging/). Build/install from a clone:
 
 ```bash
 cd packaging
 makepkg -si
-systemctl --user enable --now ohm-browser.service
-xdg-settings set default-web-browser ohm-browser.desktop
+systemctl --user enable --now ohm.service
+xdg-settings set default-web-browser ohm.desktop
 ```
 
 Once Omarchy lists Ohm under *Install > Browser*, the intended path is:
@@ -133,17 +133,17 @@ omarchy default browser ohm
 
 ```
 /usr/bin/ohm
-/usr/lib/ohm-browser/ohm-browser-bin
-/usr/lib/ohm-browser/ohm-browser-passkey
-/usr/share/applications/ohm-browser.desktop
+/usr/lib/ohm/ohm-bin
+/usr/lib/ohm/ohm-passkey
+/usr/share/applications/ohm.desktop
 /usr/share/icons/hicolor/128x128/apps/ohm.png
-/usr/share/ohm-browser/downloads-panel/
-/usr/share/ohm-browser/shortcuts-panel/
-/usr/lib/systemd/user/ohm-browser.service
+/usr/share/ohm/downloads-panel/
+/usr/share/ohm/shortcuts-panel/
+/usr/lib/systemd/user/ohm.service
 ```
 
-The Quickshell panels at `/usr/share/ohm-browser/downloads-panel/` and
-`/usr/share/ohm-browser/shortcuts-panel/` are only staged there by packaged
+The Quickshell panels at `/usr/share/ohm/downloads-panel/` and
+`/usr/share/ohm/shortcuts-panel/` are only staged there by packaged
 installs, same as `hypr.lua` -- `./ohm install` (source-tree only) is
 what actually copies plugins into `~/.config/omarchy/plugins/` and enables
 them with Quickshell.
@@ -194,7 +194,7 @@ Bitwarden, ...). Tested with Google, X, and GitHub on an iPhone.
 - The rest travels through Apple's or Google's relay, end-to-end encrypted,
   the same way it does for Chrome.
 
-This is `ohm-browser-passkey`, a small Rust helper built on
+This is `ohm-passkey`, a small Rust helper built on
 [libwebauthn](https://github.com/linux-credentials/libwebauthn) (LGPL-2.1+)
 that the build compiles when `cargo` is installed. Ohm takes the site's
 origin from the browser engine, never from the page, and the helper checks
@@ -203,7 +203,7 @@ fields, and "remember this phone".
 
 ## Configuration
 
-Ohm reads `~/.config/ohm-browser/config.lua` (a real Lua file, executed with an embedded Lua 5.4 interpreter) fresh every time a new window opens — no restart needed, even against a daemon that's been running for days; just open a new window (`Ctrl+T`/`Ctrl+N`, or `Super+Shift+Return`) after editing the file. Two settings so far:
+Ohm reads `~/.config/ohm/config.lua` (a real Lua file, executed with an embedded Lua 5.4 interpreter) fresh every time a new window opens — no restart needed, even against a daemon that's been running for days; just open a new window (`Ctrl+T`/`Ctrl+N`, or `Super+Shift+Return`) after editing the file. Two settings so far:
 
 ```lua
 -- Search fallback for whatever the omnibox doesn't recognize as a URL.
@@ -234,6 +234,6 @@ It's real Lua, so either setting can be computed however you like (env vars via 
 
 ## Notes
 
-- Dedicated QtWebEngine profile at `~/.local/share/ohm-browser/profile/webengine` — your main Chromium logins are untouched.
+- Dedicated QtWebEngine profile at `~/.local/share/ohm/profile/webengine` — your main Chromium logins are untouched.
 - `Ctrl+T` opens a new empty page in the same Hyprland group as this window (and makes a group if there isn't one yet). `Ctrl+N` opens a new empty window of its own. `Ctrl+L` edits the address in this window, whole address selected. Escape goes back. On the empty gate, Ctrl+L is a no-op.
 - `Super + Shift + B` stays Omarchy's default-browser launcher (`omarchy-launch-browser` / XDG) until you say yes at install time, or run `ohm default` / `omarchy default browser ohm`.

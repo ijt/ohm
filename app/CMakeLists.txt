@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(ohm-browser VERSION 0.3.0 LANGUAGES CXX)
+project(ohm VERSION 0.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,14 +13,14 @@ endif()
 find_package(Qt6 REQUIRED COMPONENTS Widgets WebEngineWidgets Sql PrintSupport)
 
 find_package(PkgConfig REQUIRED)
-# Real Lua, not a hand-rolled parser -- ~/.config/ohm-browser/config.lua (see
+# Real Lua, not a hand-rolled parser -- ~/.config/ohm/config.lua (see
 # Config.h) is a real .lua file executed by this interpreter, so it can use
 # actual Lua (variables, conditionals, etc.), not just flat key = "value"
 # lines. Pinned to 5.4 (vs. the unversioned "lua" package, currently 5.5 on
 # this machine) for a stable, well-known embedding API.
 pkg_check_modules(LUA REQUIRED IMPORTED_TARGET lua5.4)
 
-qt_add_executable(ohm-browser-bin
+qt_add_executable(ohm-bin
   src/main.cpp
   src/Notify.cpp
   src/DownloadManager.cpp
@@ -47,7 +47,7 @@ qt_add_executable(ohm-browser-bin
   resources/ohm.qrc
 )
 
-target_link_libraries(ohm-browser-bin PRIVATE
+target_link_libraries(ohm-bin PRIVATE
   Qt6::Widgets
   Qt6::WebEngineWidgets
   Qt6::Sql
@@ -55,7 +55,7 @@ target_link_libraries(ohm-browser-bin PRIVATE
   PkgConfig::LUA
 )
 
-target_compile_definitions(ohm-browser-bin PRIVATE
+target_compile_definitions(ohm-bin PRIVATE
   OHM_VERSION="${PROJECT_VERSION}")
 
 # Unit tests: `ctest --test-dir app/build`. Packagers can pass
@@ -72,52 +72,52 @@ endif()
 include(GNUInstallDirs)
 
 # /usr/bin/ohm is the shell wrapper so `ohm uninstall` runs the
-# command instead of the browser. The ELF stays ohm-browser-bin; naming it
+# command instead of the browser. The ELF stays ohm-bin; naming it
 # `ohm` made `ohm uninstall` a URL, which paints a blank window.
 install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/../ohm"
   DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(PROGRAMS $<TARGET_FILE:ohm-browser-bin>
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/ohm-browser)
+install(PROGRAMS $<TARGET_FILE:ohm-bin>
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/ohm)
 
-# Phone passkeys (../passkey-helper): a Rust helper next to ohm-browser-bin,
+# Phone passkeys (../passkey-helper): a Rust helper next to ohm-bin,
 # where PasskeyBroker looks for it. Without cargo, Ohm builds and runs
 # as before, just without passkeys. Cargo keeps its own incremental state,
 # so the always-run target is a quick no-op when nothing changed.
-option(OHM_PASSKEYS "Build ohm-browser-passkey for phone passkeys (needs cargo)" ON)
+option(OHM_PASSKEYS "Build ohm-passkey for phone passkeys (needs cargo)" ON)
 if(OHM_PASSKEYS)
   find_program(CARGO_EXECUTABLE cargo)
   if(CARGO_EXECUTABLE)
     set(_passkey_src "${CMAKE_CURRENT_SOURCE_DIR}/../passkey-helper")
-    set(_passkey_bin "${CMAKE_CURRENT_BINARY_DIR}/ohm-browser-passkey")
-    add_custom_target(ohm-browser-passkey ALL
+    set(_passkey_bin "${CMAKE_CURRENT_BINARY_DIR}/ohm-passkey")
+    add_custom_target(ohm-passkey ALL
       COMMAND "${CARGO_EXECUTABLE}" build --release --locked
               --manifest-path "${_passkey_src}/Cargo.toml"
               --target-dir "${CMAKE_CURRENT_BINARY_DIR}/cargo"
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-              "${CMAKE_CURRENT_BINARY_DIR}/cargo/release/ohm-browser-passkey" "${_passkey_bin}"
-      COMMENT "Building ohm-browser-passkey (phone passkeys)"
+              "${CMAKE_CURRENT_BINARY_DIR}/cargo/release/ohm-passkey" "${_passkey_bin}"
+      COMMENT "Building ohm-passkey (phone passkeys)"
       USES_TERMINAL)
-    install(PROGRAMS "${_passkey_bin}" DESTINATION ${CMAKE_INSTALL_LIBDIR}/ohm-browser)
+    install(PROGRAMS "${_passkey_bin}" DESTINATION ${CMAKE_INSTALL_LIBDIR}/ohm)
   else()
-    message(WARNING "cargo not found: building without phone passkeys (ohm-browser-passkey)")
+    message(WARNING "cargo not found: building without phone passkeys (ohm-passkey)")
   endif()
 endif()
 
 set(_ohm_packaging_dir "${CMAKE_CURRENT_SOURCE_DIR}/../packaging")
-install(FILES "${_ohm_packaging_dir}/ohm-browser.desktop"
+install(FILES "${_ohm_packaging_dir}/ohm.desktop"
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png"
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/128x128/apps
-  RENAME ohm-browser.png)
+  RENAME ohm.png)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.svg"
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps
-  RENAME ohm-browser.svg)
+  RENAME ohm.svg)
 
 # systemd user unit: ExecStart must match the install prefix (/usr for
 # packages, /usr/local for a plain cmake --install). The daemon is the ELF,
 # not the wrapper, so a packaged unit does not depend on the shell script.
-set(OHM_DAEMON_EXEC "${CMAKE_INSTALL_FULL_LIBDIR}/ohm-browser/ohm-browser-bin")
-configure_file("${_ohm_packaging_dir}/ohm-browser.service.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/ohm-browser.service" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ohm-browser.service"
+set(OHM_DAEMON_EXEC "${CMAKE_INSTALL_FULL_LIBDIR}/ohm/ohm-bin")
+configure_file("${_ohm_packaging_dir}/ohm.service.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/ohm.service" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ohm.service"
   DESTINATION "lib/systemd/user")

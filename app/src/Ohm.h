@@ -12,7 +12,7 @@ namespace ohm {
 // Fixed Wayland app_id / QGuiApplication name. Every Ohm window uses this
 // same id (see hypr.lua), unlike the old Chromium --app windows whose app_id
 // was derived from the loaded URL.
-inline const char *kAppId = "ohm-browser";
+inline const char *kAppId = "ohm";
 
 // Subcommands of the `ohm` wrapper (install/uninstall/daemon/…). The
 // browser binary must never navigate to these: a schemeless QUrl paints as
@@ -26,13 +26,13 @@ inline bool isShellCommand(const QString &arg) {
          c == QLatin1String("theme") || c == QLatin1String("help");
 }
 
-// ~/.local/share/ohm-browser (respects XDG_DATA_HOME).
+// ~/.local/share/ohm (respects XDG_DATA_HOME).
 inline QString dataHome() {
   QString base = QString::fromLocal8Bit(qgetenv("XDG_DATA_HOME"));
   if (base.isEmpty()) {
     base = QDir::homePath() + "/.local/share";
   }
-  QDir dir(base + "/ohm-browser");
+  QDir dir(base + "/ohm");
   dir.mkpath(".");
   return dir.absolutePath();
 }
@@ -66,7 +66,7 @@ inline QString colorsTomlPath() {
   return QDir::homePath() + "/.local/state/omarchy/current/theme/colors.toml";
 }
 
-// $XDG_CONFIG_HOME/ohm-browser/config.lua (~/.config/ohm-browser/config.lua by
+// $XDG_CONFIG_HOME/ohm/config.lua (~/.config/ohm/config.lua by
 // default) -- the user-editable Lua config file (search engine, etc; see
 // Config.h). Unlike colorsTomlPath() this one is Ohm's own, not
 // Omarchy-managed, and it's fine for it not to exist yet.
@@ -75,16 +75,16 @@ inline QString configLuaPath() {
   if (base.isEmpty()) {
     base = QDir::homePath() + "/.config";
   }
-  return base + "/ohm-browser/config.lua";
+  return base + "/ohm/config.lua";
 }
 
-// $XDG_RUNTIME_DIR/ohm-browser.sock — the singleton handoff socket.
+// $XDG_RUNTIME_DIR/ohm.sock — the singleton handoff socket.
 inline QString singletonSocketPath() {
   QString runtime = QString::fromLocal8Bit(qgetenv("XDG_RUNTIME_DIR"));
   if (runtime.isEmpty()) {
     runtime = QDir::tempPath();
   }
-  return runtime + "/ohm-browser.sock";
+  return runtime + "/ohm.sock";
 }
 
 }  // namespace ohm

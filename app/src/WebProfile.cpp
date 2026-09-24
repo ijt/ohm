@@ -238,7 +238,7 @@ void installWebAuthnShim(QWebEngineProfile *profile) {
       token: window.__ohmPasskey, type: type, topOrigin: topOrigin,
       options: encode(options.publicKey)
     });
-    return fetch_.call(window, 'ohm-browser-passkey:ceremony',
+    return fetch_.call(window, 'ohm-passkey:ceremony',
                        { method: 'POST', body: body, signal: signal, credentials: 'omit' })
       .then(function(r) { return r.json(); })
       .then(function(reply) {
@@ -298,7 +298,7 @@ QWebEngineProfile *createSharedProfile(QObject *parent, DownloadManager *downloa
   // Named, persistent (non-off-the-record) profile. QWebEngineProfile picks
   // sane cache/storage subpaths under persistentStoragePath by default; we
   // just point it at our own directory instead of Qt's default location.
-  auto *profile = new QWebEngineProfile(QStringLiteral("ohm-browser"), parent);
+  auto *profile = new QWebEngineProfile(QStringLiteral("ohm"), parent);
   profile->setPersistentStoragePath(storage);
   profile->setCachePath(storage + "/cache");
   profile->setPersistentCookiesPolicy(QWebEngineProfile::ForcePersistentCookies);

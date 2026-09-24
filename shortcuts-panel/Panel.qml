@@ -7,7 +7,7 @@ import qs.Commons
 import qs.Ui
 
 // Standalone summonable panel -- same "panel" kind contract as
-// ohm-browser.downloads / omarchy.disk-speedtest: a plain Item exposing
+// ohm.downloads / omarchy.disk-speedtest: a plain Item exposing
 // open(payloadJson)/close()/dismiss(), building its own PanelWindow overlay.
 // A cheatsheet that doubles as a command palette: typing filters the rows,
 // and Enter (or a click) runs the selected row's `command` via
@@ -23,7 +23,7 @@ Item {
   property var manifest: null
   property bool opened: false
 
-  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "ohm-browser.shortcuts"
+  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "ohm.shortcuts"
   readonly property string fontFamily: Style.font.family
   // Typed filter. A leading ":" (vim habit) is ignored.
   readonly property string query: filterField.text.replace(/^:+/, "").trim().toLowerCase()
@@ -173,7 +173,7 @@ Item {
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.namespace: "ohm-browser-shortcuts"
+    WlrLayershell.namespace: "ohm-shortcuts"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 

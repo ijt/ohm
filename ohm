@@ -9,14 +9,14 @@ set -euo pipefail
 SCRIPT_PATH=$(readlink -f "${BASH_SOURCE[0]}")
 SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 # Source builds drop the binary next to this script. Packages install the
-# script at /usr/bin/ohm and the binary at /usr/lib/ohm-browser/ohm-browser-bin --
+# script at /usr/bin/ohm and the binary at /usr/lib/ohm/ohm-bin --
 # the ELF must not be named `ohm`, or `ohm uninstall` is treated as a URL.
-if [[ -x $SCRIPT_DIR/app/build/ohm-browser-bin ]]; then
-  BIN="$SCRIPT_DIR/app/build/ohm-browser-bin"
-elif [[ -x $SCRIPT_DIR/../lib/ohm-browser/ohm-browser-bin ]]; then
-  BIN="$SCRIPT_DIR/../lib/ohm-browser/ohm-browser-bin"
+if [[ -x $SCRIPT_DIR/app/build/ohm-bin ]]; then
+  BIN="$SCRIPT_DIR/app/build/ohm-bin"
+elif [[ -x $SCRIPT_DIR/../lib/ohm/ohm-bin ]]; then
+  BIN="$SCRIPT_DIR/../lib/ohm/ohm-bin"
 else
-  BIN="/usr/lib/ohm-browser/ohm-browser-bin"
+  BIN="/usr/lib/ohm/ohm-bin"
 fi
 # Quickshell panels (downloads-panel/, shortcuts-panel/) are not binaries --
 # they have to be copied into Omarchy's third-party plugin directory for
@@ -24,10 +24,10 @@ fi
 DOWNLOADS_PANEL_SRC="$SCRIPT_DIR/downloads-panel"
 SHORTCUTS_PANEL_SRC="$SCRIPT_DIR/shortcuts-panel"
 
-DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/ohm-browser"
+DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/ohm"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-DOWNLOADS_PANEL_DEST="$CONFIG_HOME/omarchy/plugins/ohm-browser-downloads"
-SHORTCUTS_PANEL_DEST="$CONFIG_HOME/omarchy/plugins/ohm-browser-shortcuts"
+DOWNLOADS_PANEL_DEST="$CONFIG_HOME/omarchy/plugins/ohm-downloads"
+SHORTCUTS_PANEL_DEST="$CONFIG_HOME/omarchy/plugins/ohm-shortcuts"
 
 usage() {
   cat <<'EOF'
@@ -57,25 +57,25 @@ install_desktop() {
   mkdir -p "$HOME/.local/share/applications"
   # Prefer the packaged desktop template when present; rewrite Exec/Icon for
   # a source-tree install under ~/.local.
-  local template=$SCRIPT_DIR/packaging/ohm-browser.desktop
+  local template=$SCRIPT_DIR/packaging/ohm.desktop
   if [[ -f $template ]]; then
     sed -e "s|^Exec=ohm|Exec=$HOME/.local/bin/ohm|" \
-        -e "s|^Icon=ohm-browser|Icon=$SCRIPT_DIR/app/resources/icon.svg|" \
-        "$template" >"$HOME/.local/share/applications/ohm-browser.desktop"
+        -e "s|^Icon=ohm|Icon=$SCRIPT_DIR/app/resources/icon.svg|" \
+        "$template" >"$HOME/.local/share/applications/ohm.desktop"
   else
-    cat >"$HOME/.local/share/applications/ohm-browser.desktop" <<EOF
+    cat >"$HOME/.local/share/applications/ohm.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Ohm
 GenericName=Web Browser
-Comment=Page viewer for Omarchy — one window, one page
+Comment=A minimal web browser: one window per page, and Hyprland is the tab bar
 Exec=$HOME/.local/bin/ohm %u
 Icon=$SCRIPT_DIR/app/resources/icon.svg
 Terminal=false
 Categories=Network;WebBrowser;
 MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/about;x-scheme-handler/unknown;
 StartupNotify=false
-StartupWMClass=ohm-browser
+StartupWMClass=ohm
 EOF
   fi
   command -v update-desktop-database >/dev/null &&
@@ -83,7 +83,7 @@ EOF
 }
 
 set_mime_default() {
-  local desktop=ohm-browser.desktop
+  local desktop=ohm.desktop
   local mime
   for mime in text/html text/xml application/xhtml+xml \
     x-scheme-handler/http x-scheme-handler/https \
@@ -124,7 +124,7 @@ for line in lines:
         if in_default:
             for mime in repls:
                 if mime not in seen:
-                    out.append(f"{mime}=ohm-browser.desktop")
+                    out.append(f"{mime}=ohm.desktop")
                     seen.add(mime)
         in_default = False
         out.append(line)
@@ -132,14 +132,14 @@ for line in lines:
     if in_default and "=" in line and not line.lstrip().startswith("#"):
         key = line.split("=", 1)[0].strip()
         if key in repls:
-            out.append(f"{key}=ohm-browser.desktop")
+            out.append(f"{key}=ohm.desktop")
             seen.add(key)
             continue
     out.append(line)
 if in_default:
     for mime in repls:
         if mime not in seen:
-            out.append(f"{mime}=ohm-browser.desktop")
+            out.append(f"{mime}=ohm.desktop")
 path.write_text("\n".join(out).rstrip() + "\n")
 PY
 }
@@ -148,11 +148,11 @@ install_default() {
   install_desktop
   patch_mimeapps
   set_mime_default
-  env -u BROWSER xdg-settings set default-web-browser ohm-browser.desktop
+  env -u BROWSER xdg-settings set default-web-browser ohm.desktop
 }
 
 is_default_browser() {
-  [[ $(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null) == ohm-browser.desktop ]]
+  [[ $(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null) == ohm.desktop ]]
 }
 
 # Prompt on stdout; read from /dev/tty so this still works when stdin is a
@@ -207,7 +207,7 @@ from pathlib import Path
 import sys
 path = Path(sys.argv[1])
 text = path.read_text()
-text = text.replace("=ohm-browser.desktop", "=chromium.desktop")
+text = text.replace("=ohm.desktop", "=chromium.desktop")
 path.write_text(text)
 PY
   fi
@@ -224,7 +224,7 @@ restore_default() {
 
 install_systemd() {
   mkdir -p "$CONFIG_HOME/systemd/user"
-  cat >"$CONFIG_HOME/systemd/user/ohm-browser.service" <<EOF
+  cat >"$CONFIG_HOME/systemd/user/ohm.service" <<EOF
 [Unit]
 Description=Ohm warm browser daemon
 PartOf=graphical-session.target
@@ -245,15 +245,15 @@ PassEnvironment=WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE FON
 WantedBy=graphical-session.target
 EOF
   systemctl --user daemon-reload
-  systemctl --user enable --now ohm-browser.service
+  systemctl --user enable --now ohm.service
 }
 
 install_hypr() {
-  local dest=$CONFIG_HOME/hypr/ohm-browser.lua
+  local dest=$CONFIG_HOME/hypr/ohm.lua
   cp "$SCRIPT_DIR/hypr.lua" "$dest"
   local main=$CONFIG_HOME/hypr/hyprland.lua
-  if [[ -f $main ]] && ! grep -q 'require("hypr.ohm-browser")' "$main"; then
-    printf '\n-- Ohm page viewer\nrequire("hypr.ohm-browser")\n' >>"$main"
+  if [[ -f $main ]] && ! grep -q 'require("hypr.ohm")' "$main"; then
+    printf '\n-- Ohm page viewer\nrequire("hypr.ohm")\n' >>"$main"
   fi
   local bindings=$CONFIG_HOME/hypr/bindings.lua
   if [[ -f $bindings ]] && ! grep -q 'Ohm' "$bindings"; then
@@ -305,7 +305,7 @@ install_omarchy_panel() {
   fi
   # rescanPlugins returns before Quickshell finishes the scan (the reload is
   # scheduled with Qt.callLater). Enabling in that window fails with "plugin
-  # is not known". Swallowing that left ohm-browser.shortcuts disabled, so Ctrl+?
+  # is not known". Swallowing that left ohm.shortcuts disabled, so Ctrl+?
   # summoned nothing.
   omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
   local i
@@ -337,11 +337,11 @@ restart_shell_if_panels_changed() {
 }
 
 install_downloads_panel() {
-  install_omarchy_panel "$DOWNLOADS_PANEL_SRC" "$DOWNLOADS_PANEL_DEST" ohm-browser.downloads downloads
+  install_omarchy_panel "$DOWNLOADS_PANEL_SRC" "$DOWNLOADS_PANEL_DEST" ohm.downloads downloads
 }
 
 install_shortcuts_panel() {
-  install_omarchy_panel "$SHORTCUTS_PANEL_SRC" "$SHORTCUTS_PANEL_DEST" ohm-browser.shortcuts shortcuts
+  install_omarchy_panel "$SHORTCUTS_PANEL_SRC" "$SHORTCUTS_PANEL_DEST" ohm.shortcuts shortcuts
 }
 
 uninstall_omarchy_panels() {
@@ -349,8 +349,8 @@ uninstall_omarchy_panels() {
   # Deleting a live plugin makes the shell reload it mid-rm and can flash a
   # blank window.
   if command -v omarchy-plugin-disable >/dev/null 2>&1; then
-    omarchy-plugin-disable ohm-browser.downloads >/dev/null 2>&1 || true
-    omarchy-plugin-disable ohm-browser.shortcuts >/dev/null 2>&1 || true
+    omarchy-plugin-disable ohm.downloads >/dev/null 2>&1 || true
+    omarchy-plugin-disable ohm.shortcuts >/dev/null 2>&1 || true
   fi
   rm -rf "$DOWNLOADS_PANEL_DEST" "$SHORTCUTS_PANEL_DEST"
   if command -v omarchy-shell >/dev/null 2>&1; then
@@ -364,24 +364,35 @@ install_theme_hook() {
   fi
 }
 
-# Ohm was called Shinto until 0.3.0. Carries a Shinto install over: data
-# and config move (never copied, never deleted), and the old service,
+# Earlier names of this install: Shinto (until 0.3.0), then ohm-browser for
+# every machine-facing name (0.3.0). Carries either over to plain `ohm`:
+# data and config move (never copied, never deleted), and the old service,
 # command, desktop entry, Hyprland wiring and panels go. Safe to re-run.
-# Echoes 1 if Shinto was the default browser, so the caller can hand that
-# to Ohm once its desktop entry exists.
-migrate_from_shinto() {
-  local old_data=${XDG_DATA_HOME:-$HOME/.local/share}/shinto
-  local was_default=0
-  [[ $(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null) == shinto.desktop ]] &&
-    was_default=1
+# Echoes 1 if an old name was the default browser, so the caller can hand
+# that to Ohm once its desktop entry exists.
+migrate_old_installs() {
+  local was_default=0 old
+  for old in shinto ohm-browser; do
+    migrate_install_named "$old" && was_default=1
+  done
+  echo "$was_default"
+}
+
+# Returns 0 if `old` was the default browser.
+migrate_install_named() {
+  local old=$1
+  local old_data=${XDG_DATA_HOME:-$HOME/.local/share}/$old
+  local was_default=1
+  [[ $(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null) == "$old.desktop" ]] &&
+    was_default=0
 
   # Stop the old daemon before its data moves out from under it.
-  if [[ -f $CONFIG_HOME/systemd/user/shinto.service ]]; then
-    systemctl --user disable --now shinto.service >/dev/null 2>&1 || true
-    rm -f "$CONFIG_HOME/systemd/user/shinto.service"
+  if [[ -f $CONFIG_HOME/systemd/user/$old.service ]]; then
+    systemctl --user disable --now "$old.service" >/dev/null 2>&1 || true
+    rm -f "$CONFIG_HOME/systemd/user/$old.service"
     systemctl --user daemon-reload
   fi
-  pkill -x shinto-bin 2>/dev/null || true
+  pkill -x "$old-bin" 2>/dev/null || true
 
   if [[ -d $old_data ]]; then
     mkdir -p "$DATA_HOME"
@@ -396,7 +407,7 @@ migrate_from_shinto() {
         moved=1
       fi
     done
-    ((moved)) && echo "ohm: moved Shinto's logins, history and downloads to $DATA_HOME" >&2
+    ((moved)) && echo "ohm: moved logins, history and downloads from $old_data to $DATA_HOME" >&2
     # Drop the old clone only if it's clean and isn't what's running now.
     local old_src=$old_data/src
     if [[ -d $old_src/.git && $SCRIPT_DIR != "$old_src"* ]] &&
@@ -405,42 +416,49 @@ migrate_from_shinto() {
     fi
     rmdir "$old_data" 2>/dev/null || true
   fi
-  if [[ -d $CONFIG_HOME/shinto && ! -e $CONFIG_HOME/ohm-browser ]]; then
-    mv "$CONFIG_HOME/shinto" "$CONFIG_HOME/ohm-browser"
+  if [[ -d $CONFIG_HOME/$old && ! -e $CONFIG_HOME/ohm ]]; then
+    mv "$CONFIG_HOME/$old" "$CONFIG_HOME/ohm"
   fi
 
-  # The command, and older versions' shinto-* helpers that pointed into
-  # the old data directory.
+  # The old command, and older versions' helpers that pointed into the old
+  # data directory (shinto-downloads).
   local link
-  for link in "$HOME/.local/bin/shinto" "$HOME/.local/bin"/shinto-*; do
+  for link in "$HOME/.local/bin/$old" "$HOME/.local/bin/$old"-*; do
     [[ -L $link ]] && rm -f "$link"
   done
-  rm -f "$HOME/.local/share/applications/shinto.desktop"
+  rm -f "$HOME/.local/share/applications/$old.desktop"
   if [[ -f $HOME/.config/mimeapps.list ]]; then
-    sed -i 's/=shinto\.desktop/=ohm-browser.desktop/g' "$HOME/.config/mimeapps.list"
+    sed -i "s/=${old//./\\.}\\.desktop/=ohm.desktop/g" "$HOME/.config/mimeapps.list"
   fi
 
   if command -v omarchy-plugin-disable >/dev/null 2>&1; then
-    omarchy-plugin-disable shinto.downloads >/dev/null 2>&1 || true
-    omarchy-plugin-disable shinto.shortcuts >/dev/null 2>&1 || true
+    omarchy-plugin-disable "$old.downloads" >/dev/null 2>&1 || true
+    omarchy-plugin-disable "$old.shortcuts" >/dev/null 2>&1 || true
   fi
-  rm -rf "$CONFIG_HOME/omarchy/plugins/shinto-downloads" "$CONFIG_HOME/omarchy/plugins/shinto-shortcuts"
+  rm -rf "$CONFIG_HOME/omarchy/plugins/$old-downloads" "$CONFIG_HOME/omarchy/plugins/$old-shortcuts"
 
-  # Same line-matching as uninstall, for the old names. install_hypr then
-  # adds Ohm's own lines.
-  rm -f "$CONFIG_HOME/hypr/shinto.lua"
+  # install_hypr then adds Ohm's own lines.
+  rm -f "$CONFIG_HOME/hypr/$old.lua"
   if [[ -f $CONFIG_HOME/hypr/hyprland.lua ]]; then
-    python3 - "$CONFIG_HOME/hypr/hyprland.lua" <<'PY'
+    python3 - "$CONFIG_HOME/hypr/hyprland.lua" "$old" <<'PY'
 from pathlib import Path
 import sys
-p = Path(sys.argv[1])
+p, old = Path(sys.argv[1]), sys.argv[2]
 lines = p.read_text().splitlines()
-out = [l for l in lines if "hypr.shinto" not in l and l.strip() != "-- Shinto page viewer"]
+out = []
+for line in lines:
+    if f'require("hypr.{old}")' in line:
+        # Its "-- ... page viewer" comment goes with it.
+        if out and out[-1].strip().startswith("--") and "page viewer" in out[-1]:
+            out.pop()
+        continue
+    out.append(line)
 if out != lines:
     p.write_text("\n".join(out).rstrip() + "\n")
 PY
   fi
-  if [[ -f $CONFIG_HOME/hypr/bindings.lua ]]; then
+  # Shinto's own keybindings; ohm-browser's already launch `ohm`.
+  if [[ $old == shinto && -f $CONFIG_HOME/hypr/bindings.lua ]]; then
     python3 - "$CONFIG_HOME/hypr/bindings.lua" <<'PY'
 from pathlib import Path
 import sys
@@ -462,7 +480,7 @@ if out != lines:
     p.write_text("\n".join(out).rstrip() + "\n")
 PY
   fi
-  echo "$was_default"
+  return "$was_default"
 }
 
 do_install() {
@@ -470,8 +488,8 @@ do_install() {
   local first_install=1
   # -L too: an old Shinto link may dangle now that its script is renamed.
   [[ -e $HOME/.local/bin/ohm || -L $HOME/.local/bin/shinto ]] && first_install=0
-  local was_shinto_default
-  was_shinto_default=$(migrate_from_shinto)
+  local was_old_default
+  was_old_default=$(migrate_old_installs)
   install_path
   install_downloads_panel
   install_shortcuts_panel
@@ -480,9 +498,9 @@ do_install() {
   install_hypr
   install_systemd
   install_theme_hook
-  if ((was_shinto_default)); then
+  if ((was_old_default)); then
     install_default
-    echo "Ohm is your default browser, as Shinto was."
+    echo "Ohm is still your default browser."
   fi
   echo "Ohm installed."
   maybe_install_default "$first_install"
@@ -492,11 +510,11 @@ do_install() {
 }
 
 do_uninstall() {
-  systemctl --user disable --now ohm-browser.service 2>/dev/null || true
-  rm -f "$CONFIG_HOME/systemd/user/ohm-browser.service"
+  systemctl --user disable --now ohm.service 2>/dev/null || true
+  rm -f "$CONFIG_HOME/systemd/user/ohm.service"
   rm -f "$HOME/.local/bin/ohm"
   uninstall_omarchy_panels
-  rm -f "$HOME/.local/share/applications/ohm-browser.desktop"
+  rm -f "$HOME/.local/share/applications/ohm.desktop"
   # Unhook before deleting: Hyprland auto-reloads on config changes, and
   # deleting ohm.lua while hyprland.lua still requires it flashed a
   # config-error banner until the require was gone.
@@ -509,10 +527,10 @@ out = []
 i = 0
 while i < len(lines):
     line = lines[i]
-    if line.strip() == "-- Ohm page viewer" and i + 1 < len(lines) and "hypr.ohm-browser" in lines[i + 1]:
+    if line.strip() == "-- Ohm page viewer" and i + 1 < len(lines) and "hypr.ohm" in lines[i + 1]:
         i += 2
         continue
-    if "hypr.ohm-browser" in line:
+    if "hypr.ohm" in line:
         i += 1
         continue
     out.append(line)
@@ -549,9 +567,9 @@ for line in lines:
 p.write_text("\n".join(out).rstrip() + "\n")
 PY
   fi
-  rm -f "$CONFIG_HOME/hypr/ohm-browser.lua"
+  rm -f "$CONFIG_HOME/hypr/ohm.lua"
   scrub_ohm_mime
-  if [[ $(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null) == ohm-browser.desktop ]]; then
+  if [[ $(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null) == ohm.desktop ]]; then
     restore_default
   fi
   systemctl --user daemon-reload 2>/dev/null || true
@@ -579,39 +597,39 @@ case $cmd in
     do_uninstall
     ;;
   start)
-    systemctl --user start ohm-browser.service
+    systemctl --user start ohm.service
     ;;
   stop)
-    systemctl --user stop ohm-browser.service
+    systemctl --user stop ohm.service
     ;;
   restart)
-    # The warm daemon is systemd's ohm-browser.service, which execs the
-    # install-tree wrapper (~/.local/share/ohm-browser/src/ohm daemon), not
+    # The warm daemon is systemd's ohm.service, which execs the
+    # install-tree wrapper (~/.local/share/ohm/src/ohm daemon), not
     # necessarily this checkout. Copy this tree's freshly built binary
     # over that one (no-op if they're the same file), then bounce the
     # unit so the running process is the new build.
     require_bin
-    systemctl --user stop ohm-browser.service 2>/dev/null || true
-    pkill -x ohm-browser-bin 2>/dev/null || true
+    systemctl --user stop ohm.service 2>/dev/null || true
+    pkill -x ohm-bin 2>/dev/null || true
     sleep 0.2
-    if pgrep -x ohm-browser-bin >/dev/null; then
-      pkill -9 -x ohm-browser-bin || true
+    if pgrep -x ohm-bin >/dev/null; then
+      pkill -9 -x ohm-bin || true
       sleep 0.2
     fi
-    daemon_wrapper=$(systemctl --user cat ohm-browser.service 2>/dev/null |
+    daemon_wrapper=$(systemctl --user cat ohm.service 2>/dev/null |
       awk '/^ExecStart=/ { sub(/^ExecStart=/, ""); print $1; exit }')
     if [[ -n $daemon_wrapper ]]; then
-      daemon_bin="$(dirname "$(readlink -f "$daemon_wrapper")")/app/build/ohm-browser-bin"
+      daemon_bin="$(dirname "$(readlink -f "$daemon_wrapper")")/app/build/ohm-bin"
       src=$(readlink -f "$BIN")
       if [[ $src != "$(readlink -f "$daemon_bin" 2>/dev/null || true)" ]]; then
         mkdir -p "$(dirname "$daemon_bin")"
         cp -f "$src" "$daemon_bin"
       fi
     fi
-    systemctl --user start ohm-browser.service
+    systemctl --user start ohm.service
     ;;
   status)
-    systemctl --user status ohm-browser.service --no-pager || true
+    systemctl --user status ohm.service --no-pager || true
     ;;
   theme | --theme)
     require_bin

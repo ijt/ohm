@@ -35,8 +35,8 @@ QString openCommand(const QString &url) {
   return url.isEmpty() ? QStringLiteral("OPEN") : QStringLiteral("OPEN ") + url;
 }
 
-// Source-tree binary is <root>/app/build/ohm-browser-bin and the wrapper is
-// <root>/ohm. A packaged binary lives in lib/ohm-browser next to /usr/bin/ohm.
+// Source-tree binary is <root>/app/build/ohm-bin and the wrapper is
+// <root>/ohm. A packaged binary lives in lib/ohm next to /usr/bin/ohm.
 // Only a script (shebang) counts -- never re-exec this ELF.
 QString shellWrapperPath() {
   const QString exe = QFileInfo(QStringLiteral("/proc/self/exe")).canonicalFilePath();
@@ -59,7 +59,7 @@ QString shellWrapperPath() {
   return {};
 }
 
-// `ohm-browser-bin uninstall` (and the packaged ELF named ohm) used to hand
+// `ohm-bin uninstall` (and the packaged ELF named ohm) used to hand
 // the word to the daemon as a URL. Re-exec the wrapper so the command runs.
 // OHM_SUBCOMMAND_FORWARD breaks the loop if the wrapper execs us back.
 bool forwardShellCommand(char **argv, const QString &cmd) {
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
   // Chromium chooses its screen capturer from XDG_SESSION_TYPE: "wayland"
   // means PipeWire via the desktop portal (Hyprland's share picker);
   // anything else means X11 capture, which under XWayland shares a black
-  // screen. systemd user services get "unspecified", and ohm-browser.service is
+  // screen. systemd user services get "unspecified", and ohm.service is
   // how the daemon normally runs -- so say what the session really is.
   if (!qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY") &&
       qgetenv("XDG_SESSION_TYPE") != "wayland") {

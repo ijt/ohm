@@ -8,13 +8,13 @@ namespace ohm {
 void showDownloadsPanel() {
   QProcess::startDetached(QStringLiteral("omarchy-shell"),
                            {QStringLiteral("shell"), QStringLiteral("toggle"),
-                            QStringLiteral("ohm-browser.downloads")});
+                            QStringLiteral("ohm.downloads")});
 }
 
 void showShortcutsPanel() {
   QProcess::startDetached(QStringLiteral("omarchy-shell"),
                            {QStringLiteral("shell"), QStringLiteral("toggle"),
-                            QStringLiteral("ohm-browser.shortcuts")});
+                            QStringLiteral("ohm.shortcuts")});
 }
 
 bool isShortcutsPanelKey(const QKeyEvent *key) {

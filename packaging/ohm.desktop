@@ -2,14 +2,14 @@
 Type=Application
 Name=Ohm
 GenericName=Web Browser
-Comment=Page viewer for Omarchy — one window, one page
+Comment=A minimal web browser: one window per page, and Hyprland is the tab bar
 Exec=ohm %u
-Icon=ohm-browser
+Icon=ohm
 Terminal=false
 Categories=Network;WebBrowser;
 MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/about;x-scheme-handler/unknown;
 StartupNotify=false
-StartupWMClass=ohm-browser
+StartupWMClass=ohm
 Keywords=Internet;WWW;Browser;Web;Explorer
 Actions=new-window;
 

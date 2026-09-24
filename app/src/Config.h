@@ -1,5 +1,5 @@
 // User-editable settings loaded from a real Lua config file
-// (ohm::configLuaPath(), normally ~/.config/ohm-browser/config.lua) via an
+// (ohm::configLuaPath(), normally ~/.config/ohm/config.lua) via an
 // embedded Lua interpreter. Currently just the search engine, but unlike
 // ThemeLoader's flat colors.toml reader this one runs actual Lua, so a
 // config file can compute a value however it likes (env vars via os.getenv,

@@ -11,7 +11,7 @@ import "Model.js" as Model
 // contract as omarchy.disk-speedtest/omarchy.wifiqr: a plain Item exposing
 // open(payloadJson)/close()/dismiss(), building its own PanelWindow overlay.
 // Replaces the old downloads-tui Go/Bubble Tea TUI: same downloads.sqlite,
-// same ohm-browser.sock cancel protocol (both via downloads_helper.py), same
+// same ohm.sock cancel protocol (both via downloads_helper.py), same
 // Omarchy theme file, just as a mouse-and-keyboard Quickshell panel instead
 // of a separate terminal window.
 Item {
@@ -21,7 +21,7 @@ Item {
   property var manifest: null
   property bool opened: false
 
-  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "ohm-browser.downloads"
+  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "ohm.downloads"
   readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : ""
   readonly property string fontFamily: Style.font.family
 
@@ -92,7 +92,7 @@ Item {
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.namespace: "ohm-browser-downloads"
+    WlrLayershell.namespace: "ohm-downloads"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 

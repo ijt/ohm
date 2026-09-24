@@ -1,0 +1,55 @@
+# Maintainer: Isaac Turner <ijt@github>
+# Versioned package for GitHub Releases (`pacman -U` the .pkg.tar.zst).
+# The rolling AUR recipe is packaging/PKGBUILD (`ohm-git`).
+
+pkgname=ohm
+pkgver=0.3.0
+pkgrel=1
+pkgdesc="A minimal web browser for Omarchy: one window per page, and Hyprland is the tab bar"
+arch=('x86_64' 'aarch64')
+url="https://github.com/ijt/ohm-browser"
+license=('MIT')
+depends=('qt6-base' 'qt6-webengine' 'lua54'
+         # ohm-passkey (phone passkeys): D-Bus/BlueZ, hidraw, rp.id checks
+         'dbus' 'systemd-libs' 'publicsuffix-list')
+optdepends=('bluez: phone passkeys (the phone proves it is nearby over Bluetooth)')
+makedepends=('git' 'cmake' 'cargo')
+conflicts=('ohm-git' 'ohm-browser' 'ohm-browser-git' 'shinto' 'shinto-git')
+# Earlier names: shinto until 0.3.0, ohm-browser for 0.3.0.
+replaces=('shinto' 'ohm-browser')
+install=ohm.install
+# !lto: makepkg's -flto=auto turns ohm-passkey's C dependencies (ring)
+# into GCC LTO bitcode, which rustc's lld (the x86_64 default) can't link.
+options=('!debug' '!lto')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+prepare() {
+  # GitHub's tag archive unpacks under the repo's name (ohm-browser-0.3.1);
+  # CI's git archive uses ohm-0.3.1.
+  local dir
+  for dir in "ohm-browser-$pkgver" "ohm-browser-v$pkgver" "$pkgname-v$pkgver"; do
+    if [[ -d "$srcdir/$dir" && ! -d "$srcdir/$pkgname-$pkgver" ]]; then
+      mv "$srcdir/$dir" "$srcdir/$pkgname-$pkgver"
+    fi
+  done
+}
+
+build() {
+  cmake -S "$pkgname-$pkgver/app" -B build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr
+  cmake --build build --parallel "$(nproc)"
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+  install -Dm644 "$pkgname-$pkgver/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$pkgname-$pkgver/hypr.lua" "$pkgdir/usr/share/ohm/hypr.lua"
+  install -Dm755 "$pkgname-$pkgver/theme-set-hook.sh" "$pkgdir/usr/share/ohm/theme-set-hook.sh"
+  # Omarchy Quickshell panels (see downloads-panel/, shortcuts-panel/);
+  # same "for source-style installs" caveat as hypr.lua above -- only
+  # `ohm install` (source-tree) actually registers them with Quickshell.
+  cp -r "$pkgname-$pkgver/downloads-panel" "$pkgdir/usr/share/ohm/downloads-panel"
+  cp -r "$pkgname-$pkgver/shortcuts-panel" "$pkgdir/usr/share/ohm/shortcuts-panel"
+}

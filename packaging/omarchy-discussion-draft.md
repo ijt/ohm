@@ -16,15 +16,15 @@ It is a small Qt6/QtWebEngine app ([ijt/ohm](https://github.com/ijt/ohm-browser)
 
 Add Ohm beside Firefox/Zen under **Install > Browser**, and list it under **Setup > Defaults > Browser** once installed:
 
-- `omarchy install browser ohm` → install AUR `ohm-browser-git`, enable `ohm-browser.service`
+- `omarchy install browser ohm` → install AUR `ohm-git`, enable `ohm.service`
 - `omarchy default browser ohm` → XDG default for links / Super+Shift+B
 - Tag `ohm` in `default/hypr/apps/browser.lua` like other browsers
-- Add `ohm-browser*` to the browsers `omarchy-launch-webapp` hands web apps to, so
+- Add `ohm*` to the browsers `omarchy-launch-webapp` hands web apps to, so
   web apps follow the default browser the way they do for Brave or Vivaldi:
 
   ```diff
   -google-chrome* | brave* | microsoft-edge* | opera* | vivaldi* | helium*) ;;
-  +google-chrome* | brave* | microsoft-edge* | opera* | vivaldi* | helium* | ohm-browser*) ;;
+  +google-chrome* | brave* | microsoft-edge* | opera* | vivaldi* | helium* | ohm*) ;;
   ```
 
   Ohm takes Chromium's `--app=URL`, and a Ohm window is already
@@ -51,9 +51,9 @@ Firefox and Zen are fine browsers that fight the desktop less than Chrome, but t
 
 - Repo: https://github.com/ijt/ohm-browser
 - `cmake --install` layout: binary, `.desktop`, icon, systemd user unit
-- AUR recipe in-tree at `packaging/PKGBUILD` (`ohm-browser-git`)
+- AUR recipe in-tree at `packaging/PKGBUILD` (`ohm-git`)
 
-Happy to open a PR against `basecamp/omarchy` wiring the install/default/remove/menu surfaces the same way Zen does, once `ohm-browser-git` is on the AUR (or with whatever package source you prefer).
+Happy to open a PR against `basecamp/omarchy` wiring the install/default/remove/menu surfaces the same way Zen does, once `ohm-git` is on the AUR (or with whatever package source you prefer).
 
 ## Demo
 

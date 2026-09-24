@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "id": "ohm-browser.downloads",
+  "id": "ohm.downloads",
   "name": "Ohm Downloads",
   "version": "1.0.0",
   "author": "Ohm",
   "license": "MIT",
-  "description": "Ohm's downloads list: progress, open file, show in folder, cancel. Summon with: omarchy-shell shell toggle ohm-browser.downloads",
+  "description": "Ohm's downloads list: progress, open file, show in folder, cancel. Summon with: omarchy-shell shell toggle ohm.downloads",
   "kinds": [
     "panel"
   ],
