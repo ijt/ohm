@@ -99,6 +99,16 @@ int main(int argc, char *argv[]) {
     QSurfaceFormat::setDefaultFormat(format);
   }
 
+  // Chromium chooses its screen capturer from XDG_SESSION_TYPE: "wayland"
+  // means PipeWire via the desktop portal (Hyprland's share picker);
+  // anything else means X11 capture, which under XWayland shares a black
+  // screen. systemd user services get "unspecified", and shinto.service is
+  // how the daemon normally runs -- so say what the session really is.
+  if (!qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY") &&
+      qgetenv("XDG_SESSION_TYPE") != "wayland") {
+    qputenv("XDG_SESSION_TYPE", "wayland");
+  }
+
   // Must be set before QtWebEngine's Chromium backend initializes, so this
   // has to happen before anything else touches it.
   {
