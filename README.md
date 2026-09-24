@@ -78,6 +78,8 @@ cmake --build app/build
 - install the shortcuts cheatsheet -- another Quickshell panel (see
   [`shortcuts-panel/`](shortcuts-panel/)) opened with `Ctrl+?` or `F1` --
   into `~/.config/omarchy/plugins/shinto-shortcuts` and enable it
+- restart the Omarchy shell if either panel changed since the last install,
+  since a running shell keeps showing the old one
 - enable `shinto.service` so the daemon is warm after login
 - rebind `Super + Shift + Return` to Shinto and `Super + Shift + Y` to YouTube in Shinto
 - tag Shinto windows like other Chromium-family browsers

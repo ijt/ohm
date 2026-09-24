@@ -278,11 +278,18 @@ install_path() {
   ln -sfn "$SCRIPT_PATH" "$HOME/.local/bin/shinto"
 }
 
+# Set by install_omarchy_panel when it replaced an installed panel with
+# different files. See restart_shell_if_panels_changed.
+PANELS_CHANGED=0
+
 install_omarchy_panel() {
   local src=$1 dest=$2 plugin_id=$3 label=$4
   if [[ ! -d $src ]]; then
     echo "shinto: $src not found -- skipping the $label panel" >&2
     return
+  fi
+  if [[ -d $dest ]] && ! diff -rq "$src" "$dest" >/dev/null 2>&1; then
+    PANELS_CHANGED=1
   fi
   mkdir -p "$(dirname "$dest")"
   rm -rf "$dest"
@@ -313,6 +320,20 @@ install_omarchy_panel() {
   if ! err=$(omarchy-plugin-enable "$plugin_id" 2>&1); then
     echo "shinto: could not enable the $label panel ($plugin_id): ${err:-unknown error}" >&2
   fi
+}
+
+# A running Omarchy shell keeps serving the panel QML it loaded first, even
+# after its own "Local plugin changed, reloading" pass, so an upgraded panel
+# only shows up once the shell restarts. Restart it once, and only when an
+# already-installed panel actually changed (a fresh install has nothing
+# stale loaded). The bar blinks while it comes back.
+restart_shell_if_panels_changed() {
+  ((PANELS_CHANGED)) || return 0
+  command -v omarchy-restart-shell >/dev/null 2>&1 || return 0
+  omarchy-shell shell ping >/dev/null 2>&1 || return 0
+  echo "shinto: restarting the Omarchy shell to load the updated panels"
+  omarchy-restart-shell >/dev/null 2>&1 ||
+    echo "shinto: could not restart the Omarchy shell; run omarchy-restart-shell to see the updated panels" >&2
 }
 
 install_downloads_panel() {
@@ -350,6 +371,7 @@ do_install() {
   install_path
   install_downloads_panel
   install_shortcuts_panel
+  restart_shell_if_panels_changed
   install_desktop
   install_hypr
   install_systemd
