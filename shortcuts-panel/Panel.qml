@@ -14,9 +14,8 @@ import qs.Ui
 // `shinto --command <name>`, which the daemon runs in the last-focused
 // Shinto window (BrowserWindow::runCommand). Rows without a command, like
 // the Hyprland ones, are reference only. Ctrl+? / F1 in a Shinto window
-// toggles it, as does typing ":" into an empty address field (and the same
-// keys dismiss it while focused here, since Exclusive keyboard focus would
-// otherwise eat the window-level shortcut).
+// toggles it (and the same keys dismiss it while focused here, since
+// Exclusive keyboard focus would otherwise eat the window-level shortcut).
 Item {
   id: root
 
@@ -26,7 +25,7 @@ Item {
 
   readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "shinto.shortcuts"
   readonly property string fontFamily: Style.font.family
-  // Typed filter, without the vim-style leading ":".
+  // Typed filter. A leading ":" (vim habit) is ignored.
   readonly property string query: filterField.text.replace(/^:+/, "").trim().toLowerCase()
   // Index into runnableRows of the row Enter would run; -1 for none.
   property int selectedIndex: -1
@@ -47,7 +46,7 @@ Item {
         { keys: "Ctrl+P", action: "Print", command: "print" },
         { keys: "Download bar", action: "Show downloads", command: "downloads" },
         { keys: "Ctrl+W / Super+Q", action: "Close this page", command: "close" },
-        { keys: "Ctrl+? / F1 / :", action: "This list" }
+        { keys: "Ctrl+? / F1", action: "This list" }
       ]
     },
     {
@@ -264,29 +263,15 @@ Item {
                 }
               }
 
-              RowLayout {
+              TextField {
+                id: filterField
                 width: parent.width
-                spacing: Style.space(8)
-
-                Text {
-                  textFormat: Text.PlainText
-                  text: ":"
-                  color: Color.accent
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.body
-                  font.bold: true
-                }
-
-                TextField {
-                  id: filterField
-                  Layout.fillWidth: true
-                  focus: true
-                  placeholderText: "reopen, zoom, find…"
-                  // Handled before the field's own editing keys, so
-                  // Enter and Ctrl+J/K/N/P drive the palette instead.
-                  Keys.onPressed: function(event) {
-                    if (root.handleNavKey(event)) event.accepted = true
-                  }
+                focus: true
+                placeholderText: "Type a command: reopen, zoom, find…"
+                // Handled before the field's own editing keys, so
+                // Enter and Ctrl+J/K/N/P drive the palette instead.
+                Keys.onPressed: function(event) {
+                  if (root.handleNavKey(event)) event.accepted = true
                 }
               }
 
@@ -337,7 +322,7 @@ Item {
                 textFormat: Text.PlainText
                 width: parent.width
                 topPadding: Style.space(4)
-                text: "Type : in the address bar to open this · Super+K lists Hyprland's keybindings"
+                text: "Super+K lists Hyprland's own keybindings"
                 color: Qt.darker(Color.foreground, 1.4)
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption

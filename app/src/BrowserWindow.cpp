@@ -325,12 +325,6 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
 
   connect(overlay_, &OmniboxOverlay::navigateRequested, this, &BrowserWindow::onOverlayNavigate);
   connect(overlay_, &OmniboxOverlay::cancelled, this, &BrowserWindow::onOverlayCancelled);
-  connect(overlay_, &OmniboxOverlay::commandPaletteRequested, this, [this] {
-    // Back to the page (Ctrl+L case) so the command acts on it, not on the
-    // gate; a fresh empty window just keeps its empty gate.
-    onOverlayCancelled();
-    showShortcutsPanel();
-  });
 
   connect(findBar_, &FindBar::searchChanged, this,
           [this](const QString &text) { doFind(text, /*backward=*/false); });
