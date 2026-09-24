@@ -1,0 +1,17 @@
+[package]
+name = "shinto-passkey"
+version = "0.1.0"
+edition = "2021"
+description = "Phone passkeys (WebAuthn hybrid transport) for Shinto, via libwebauthn"
+license = "LGPL-2.1-or-later"
+publish = false
+
+[dependencies]
+# Pinned: hybrid is young, and this is the revision the iPhone spike passed on.
+libwebauthn = { git = "https://github.com/linux-credentials/libwebauthn", rev = "efa374d6303eb1ebeff373878fa76736f3d2c308" }
+qrcode = { version = "0.14.1", default-features = false }
+serde_json = "1"
+tokio = { version = "1.45", features = ["full"] }
+
+[profile.release]
+strip = true
