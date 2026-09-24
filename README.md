@@ -21,7 +21,7 @@ curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
 ![Chrome (left) vs. Shinto (right) on the same page](docs/chrome-vs-shinto.png)
 *Chromium on the left, Shinto on the right.*
 
-*Chromium has too much chrome; Zen isn't zen enough.*
+*Chromium has too much chrome; Zen isn't as zen as Hyprland allows.*
 
 *Shinto renders unto the window management gods what is theirs.*
 
