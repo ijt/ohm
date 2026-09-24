@@ -1,16 +1,14 @@
 # Ohm
 
-Ohm is built for [Omarchy](https://omarchy.org). It should also work on
-other Arch-based setups that have:
+**A minimal web browser for [Omarchy](https://omarchy.org): one window per page, and Hyprland is the tab bar.**
 
-- **Hyprland** with a Lua config (`~/.config/hypr/hyprland.lua`). Hyprland
-  groups serve as Ohm's tabs.
-- **pacman**, which the installer uses to fetch Qt 6 WebEngine, CMake, and
-  Lua 5.4.
-- **systemd user services**, which keep Ohm's warm daemon running.
+Ohm has no tabs, no toolbar and no address bar in the way (Ctrl+L brings one
+up). Every page is its own window, so Hyprland does the tiling, grouping and
+tab-switching that other browsers build in for themselves. Underneath it's
+Chromium, via Qt WebEngine, so sites work as you'd expect: DevTools, sign-in
+with passkeys from your phone, notifications, screen sharing, and web apps.
 
-Omarchy also provides the theme syncing and the Quickshell downloads and
-shortcuts panels. Without Omarchy, the installer skips those parts.
+*Ohm, as in resistance to everything you don't need.*
 
 ## Quick Install
 
@@ -23,7 +21,8 @@ curl -fsSL https://raw.githubusercontent.com/ijt/ohm-browser/main/install.sh | b
 
 *Chromium has too much chrome. Zen is a step closer, but Ohm lets Hyprland take us a step beyond.*
 
-Most web browsers have tabs and sometimes even window splitting to work around not having those in the host window system. In Omarchy, we have a great window manager Hyprland with tiling and tabs, so why does the browser need to have its own tabs? It doesn't! That's why Ohm doesn't have them, or anything else that gets in the way of you enjoying your pages.
+Browsers grew tabs and split views because the desktop couldn't manage their
+windows well. Hyprland can, so Ohm leaves that job to it.
 
 ## Why it starts quickly
 
@@ -41,6 +40,18 @@ The app itself is the warm daemon — no separate hidden window needed to keep i
 Omarchy's `omarchy-launch-webapp` still sends web apps to Chromium unless your default browser is on its list; Ohm isn't on it yet. Chromium remains the right tool for Chromium extensions. Ohm is for the web on a tiling compositor.
 
 ## Install
+
+Ohm is built for Omarchy. It should also work on other Arch-based setups
+that have:
+
+- **Hyprland** with a Lua config (`~/.config/hypr/hyprland.lua`). Hyprland
+  groups serve as Ohm's tabs.
+- **pacman**, which the installer uses to fetch Qt 6 WebEngine, CMake, Rust,
+  and Lua 5.4.
+- **systemd user services**, which keep Ohm's warm daemon running.
+
+Omarchy also provides the theme syncing and the Quickshell downloads and
+shortcuts panels. Without Omarchy, the installer skips those parts.
 
 ### One-line (Omarchy)
 
