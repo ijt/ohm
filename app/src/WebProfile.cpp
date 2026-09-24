@@ -163,9 +163,14 @@ void installWebAuthnShim(QWebEngineProfile *profile) {
     return v;
   }
 
+  // Writable and configurable: libraries patch the result the way they
+  // would a native credential, whose methods live on the prototype --
+  // @github/webauthn-json assigns credential.toJSON, which throws in strict
+  // mode on a read-only own property (GitHub: "Authentication failed").
   function withOwn(obj, props) {
     Object.keys(props).forEach(function(k) {
-      defineProperty(obj, k, { value: props[k], enumerable: true });
+      defineProperty(obj, k,
+        { value: props[k], enumerable: true, writable: true, configurable: true });
     });
     return obj;
   }
