@@ -1,5 +1,17 @@
 # Shinto
 
+Shinto is built for [Omarchy](https://omarchy.org). It should also work on
+other Arch-based setups that have:
+
+- **Hyprland** with a Lua config (`~/.config/hypr/hyprland.lua`). Hyprland
+  groups serve as Shinto's tabs.
+- **pacman**, which the installer uses to fetch Qt 6 WebEngine, CMake, and
+  Lua 5.4.
+- **systemd user services**, which keep Shinto's warm daemon running.
+
+Omarchy also provides the theme syncing and the Quickshell downloads and
+shortcuts panels. Without Omarchy, the installer skips those parts.
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ijt/shinto/main/install.sh | bash
 ```
