@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "Shinto",
   "license": "MIT",
-  "description": "Shinto's keyboard shortcuts. Summon with Ctrl+? or F1 in a Shinto window, or: omarchy-shell shell toggle shinto.shortcuts",
+  "description": "Shinto's keyboard shortcuts and command palette. Summon with Ctrl+?, F1, or : in the address field of a Shinto window, or: omarchy-shell shell toggle shinto.shortcuts",
   "kinds": [
     "panel"
   ],

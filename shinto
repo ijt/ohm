@@ -39,6 +39,7 @@ Usage: shinto [command] [url]
   shinto uninstall   Restore the Chromium keybind, stop daemon
   shinto start|stop|restart|status
   shinto theme       Refresh overlay colors from the Omarchy theme
+  shinto --command NAME  Run a palette command (reopen, zoom-in, ...) in the last-focused window
   shinto default     Make Shinto the XDG / Omarchy default browser
   shinto --version   Print version
 EOF
@@ -486,6 +487,11 @@ case $cmd in
   --daemon)
     require_bin
     exec "$BIN" --daemon
+    ;;
+  --command)
+    # The shortcuts panel's command palette, e.g. `shinto --command reopen`.
+    require_bin
+    exec "$BIN" --command "${2:-}"
     ;;
   --version)
     require_bin

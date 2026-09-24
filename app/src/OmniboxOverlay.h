@@ -84,6 +84,9 @@ class OmniboxOverlay : public QWidget {
   void navigateRequested(const QString &url, const QString &typedQuery);
   // The user backed out (Escape) without navigating.
   void cancelled();
+  // The user typed ":" into an empty field, vim-style: open the command
+  // palette (the shortcuts panel) instead. The ":" itself is dropped.
+  void commandPaletteRequested();
 
  protected:
   bool eventFilter(QObject *obj, QEvent *event) override;

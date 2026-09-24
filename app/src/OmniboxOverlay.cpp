@@ -109,6 +109,13 @@ OmniboxOverlay::OmniboxOverlay(HistoryStore *history, PopularDomains *domains,
   input_->setPlaceholderText(QStringLiteral("search or url"));
   input_->installEventFilter(this);
   connect(input_, &QLineEdit::textChanged, this, &OmniboxOverlay::updateSuggestions);
+  // textEdited, not textChanged: only a typed ":" counts, never one that
+  // setText() put there.
+  connect(input_, &QLineEdit::textEdited, this, [this](const QString &text) {
+    if (text != QLatin1String(":")) return;
+    input_->clear();
+    emit commandPaletteRequested();
+  });
 
   list_ = new QListWidget(this);
   list_->setFocusPolicy(Qt::NoFocus);

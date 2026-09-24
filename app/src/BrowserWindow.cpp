@@ -4,6 +4,7 @@
 #include <QCloseEvent>
 #include <QDataStream>
 #include <QFocusEvent>
+#include <QHash>
 #include <QKeyEvent>
 #include <QPrintDialog>
 #include <QPrinter>
@@ -214,6 +215,7 @@ class WebView : public QWebEngineView {
 
 QVector<BrowserWindow *> BrowserWindow::instances_;
 QVector<BrowserWindow::ClosedPage> BrowserWindow::closedPages_;
+BrowserWindow *BrowserWindow::lastActive_ = nullptr;
 Palette BrowserWindow::currentPalette_;
 
 BrowserWindow *BrowserWindow::spawn(QWebEngineProfile *profile, HistoryStore *history,
@@ -323,6 +325,12 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
 
   connect(overlay_, &OmniboxOverlay::navigateRequested, this, &BrowserWindow::onOverlayNavigate);
   connect(overlay_, &OmniboxOverlay::cancelled, this, &BrowserWindow::onOverlayCancelled);
+  connect(overlay_, &OmniboxOverlay::commandPaletteRequested, this, [this] {
+    // Back to the page (Ctrl+L case) so the command acts on it, not on the
+    // gate; a fresh empty window just keeps its empty gate.
+    onOverlayCancelled();
+    showShortcutsPanel();
+  });
 
   connect(findBar_, &FindBar::searchChanged, this,
           [this](const QString &text) { doFind(text, /*backward=*/false); });
@@ -499,6 +507,44 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
 BrowserWindow::~BrowserWindow() {
   delete printer_;
   instances_.removeOne(this);
+  if (lastActive_ == this) lastActive_ = instances_.isEmpty() ? nullptr : instances_.last();
+}
+
+void BrowserWindow::changeEvent(QEvent *event) {
+  if (event->type() == QEvent::ActivationChange && isActiveWindow()) lastActive_ = this;
+  QMainWindow::changeEvent(event);
+}
+
+void BrowserWindow::runCommand(const QString &name) {
+  BrowserWindow *w = lastActive_ ? lastActive_ : (instances_.isEmpty() ? nullptr : instances_.last());
+  if (!w) return;
+  // Names are the palette's (shortcuts-panel/Panel.qml `command` fields).
+  static const QHash<QString, void (BrowserWindow::*)()> kCommands = {
+      {QStringLiteral("new-tab"), &BrowserWindow::onNewTabShortcut},
+      {QStringLiteral("reopen"), &BrowserWindow::onReopenClosedShortcut},
+      {QStringLiteral("new-window"), &BrowserWindow::onNewPageShortcut},
+      {QStringLiteral("edit-address"), &BrowserWindow::onEditAddressShortcut},
+      {QStringLiteral("back"), &BrowserWindow::onBackShortcut},
+      {QStringLiteral("find"), &BrowserWindow::onFindShortcut},
+      {QStringLiteral("reload"), &BrowserWindow::onReloadShortcut},
+      {QStringLiteral("zoom-in"), &BrowserWindow::onZoomInShortcut},
+      {QStringLiteral("zoom-out"), &BrowserWindow::onZoomOutShortcut},
+      {QStringLiteral("print"), &BrowserWindow::onPrintRequested},
+      {QStringLiteral("downloads"), &BrowserWindow::showDownloadsPanel},
+  };
+  if (name == QLatin1String("close")) {
+    w->close();
+    return;
+  }
+  const auto it = kCommands.constFind(name);
+  if (it == kCommands.constEnd()) {
+    qWarning().noquote() << "shinto: unknown command:" << name;
+    return;
+  }
+  // The panel has just given keyboard focus back; make sure it lands on
+  // this window before e.g. the find bar or address field grabs it.
+  w->activateWindow();
+  (w->*it.value())();
 }
 
 void BrowserWindow::closeEvent(QCloseEvent *event) {

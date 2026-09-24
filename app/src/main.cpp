@@ -182,6 +182,17 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
+  if (const int i = args.indexOf(QStringLiteral("--command")); i >= 0) {
+    // The shortcuts panel's command palette: run a named command (see
+    // BrowserWindow::runCommand) in the daemon's last-focused window.
+    if (i + 1 >= args.size()) {
+      std::fputs("shinto: --command needs a command name\n", stderr);
+      return 2;
+    }
+    QCoreApplication probe(argc, argv);
+    return shinto::SingletonClient::tryHandoff(QStringLiteral("COMMAND ") + args.at(i + 1)) ? 0 : 1;
+  }
+
   const bool forceDaemon = args.removeOne(QStringLiteral("--daemon"));
   const QString url = args.isEmpty() ? QString() : args.first();
 
@@ -236,6 +247,8 @@ int main(int argc, char *argv[]) {
                     });
   QObject::connect(&server, &shinto::SingletonServer::themeReloadRequested,
                     [] { shinto::BrowserWindow::applyPaletteToAll(shinto::loadPalette()); });
+  QObject::connect(&server, &shinto::SingletonServer::commandRequested,
+                    &shinto::BrowserWindow::runCommand);
   QObject::connect(&server, &shinto::SingletonServer::cancelDownloadRequested, &downloads,
                     &shinto::DownloadManager::cancel);
 

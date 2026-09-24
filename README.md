@@ -148,7 +148,7 @@ Browser (inside a Shinto window):
 | `Ctrl + R` | Reload the page |
 | `Ctrl + =` / `Ctrl + -` | Zoom in / zoom out |
 | `Ctrl + W` / `Super + Q` | Close this page |
-| `Ctrl + ?` / `F1` | Show keyboard shortcuts |
+| `Ctrl + ?` / `F1`, or `:` in an empty address field | Shortcuts and command palette: type to filter (`:reopen`, `:zoom`), Enter runs it |
 
 Hyprland groups (these are the tabs):
 

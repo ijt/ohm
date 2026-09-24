@@ -64,6 +64,13 @@ class BrowserWindow : public QMainWindow {
   // Omarchy theme-set-hook path, delivered over the singleton socket).
   static void applyPaletteToAll(const Palette &palette);
 
+  // Runs a named command ("reopen", "zoom-in", ...; see the table in
+  // BrowserWindow.cpp) in the most recently focused window. The command
+  // palette sends these from the Quickshell shortcuts panel, which holds
+  // keyboard focus itself, so "the active window" at that moment is none of
+  // ours. Unknown names and no-window cases are ignored.
+  static void runCommand(const QString &name);
+
   // The last-broadcast palette, cached so a freshly-spawned window (or
   // DownloadsWindow, opened lazily and separately from this class) can
   // apply it immediately without waiting for the next broadcast.
@@ -73,6 +80,8 @@ class BrowserWindow : public QMainWindow {
 
  protected:
   void resizeEvent(QResizeEvent *event) override;
+  // Tracks the most recently focused window for runCommand().
+  void changeEvent(QEvent *event) override;
   // Remembers the page (URL and back/forward history) for Ctrl+Shift+T.
   void closeEvent(QCloseEvent *event) override;
 
@@ -160,6 +169,7 @@ class BrowserWindow : public QMainWindow {
   QPrinter *printer_ = nullptr;
 
   static QVector<BrowserWindow *> instances_;
+  static BrowserWindow *lastActive_;
   // Most recently closed last. Each entry is the page's URL and its
   // QWebEngineHistory serialized with QDataStream.
   struct ClosedPage {

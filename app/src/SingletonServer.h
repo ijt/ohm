@@ -34,6 +34,10 @@ class SingletonServer : public QObject {
   // process; the panel otherwise only ever reads downloads.sqlite, no
   // other IPC with the daemon.
   void cancelDownloadRequested(int id);
+  // "COMMAND <name>" -- the shortcuts panel's command palette (see
+  // shortcuts-panel/), via `shinto --command <name>`. Runs in the most
+  // recently focused window; see BrowserWindow::runCommand().
+  void commandRequested(const QString &name);
 
  private:
   void handleNewConnection();
