@@ -149,6 +149,48 @@ install_default() {
   patch_mimeapps
   set_mime_default
   env -u BROWSER xdg-settings set default-web-browser ohm.desktop
+  route_webapps
+}
+
+# omarchy-launch-webapp only honors the default browser when it's on a
+# hardcoded Chromium-family list, so with Ohm as default it still opens web
+# apps in Chromium. Point Omarchy's web app entries straight at Ohm instead.
+# Quotes around the URL are dropped: Exec may only quote whole arguments.
+# unroute_webapps undoes this; re-running install catches newly added apps.
+route_webapps() {
+  local dir=$HOME/.local/share/applications
+  [[ -d $dir ]] || return 0
+  python3 - "$dir" "$HOME/.local/bin/ohm" <<'PY2'
+import re, sys
+from pathlib import Path
+d, ohm = Path(sys.argv[1]), sys.argv[2]
+pat = re.compile(r'^Exec=omarchy-launch-webapp "?([^" ]+)"?$', re.M)
+n = 0
+for f in d.glob("*.desktop"):
+    text = f.read_text()
+    new = pat.sub(lambda m: f"Exec={ohm} --app={m.group(1)}", text)
+    if new != text:
+        f.write_text(new)
+        n += 1
+if n:
+    print(f"Web apps now open in Ohm ({n} updated).")
+PY2
+}
+
+unroute_webapps() {
+  local dir=$HOME/.local/share/applications
+  [[ -d $dir ]] || return 0
+  python3 - "$dir" "$HOME/.local/bin/ohm" <<'PY2'
+import re, sys
+from pathlib import Path
+d, ohm = Path(sys.argv[1]), sys.argv[2]
+pat = re.compile(r'^Exec=' + re.escape(ohm) + r' --app=(\S+)$', re.M)
+for f in d.glob("*.desktop"):
+    text = f.read_text()
+    new = pat.sub(lambda m: f"Exec=omarchy-launch-webapp {m.group(1)}", text)
+    if new != text:
+        f.write_text(new)
+PY2
 }
 
 is_default_browser() {
@@ -185,6 +227,7 @@ maybe_install_default() {
   local first_install=$1
   if is_default_browser; then
     echo "Ohm is already the default browser."
+    route_webapps
     return
   fi
   if [[ $first_install -eq 0 ]]; then
@@ -214,6 +257,7 @@ PY
 }
 
 restore_default() {
+  unroute_webapps
   scrub_ohm_mime
   env -u BROWSER xdg-settings set default-web-browser chromium.desktop >/dev/null 2>&1 || true
   local mime
@@ -525,6 +569,7 @@ do_uninstall() {
   systemctl --user disable --now ohm.service 2>/dev/null || true
   rm -f "$CONFIG_HOME/systemd/user/ohm.service"
   rm -f "$HOME/.local/bin/ohm"
+  unroute_webapps
   uninstall_omarchy_panels
   rm -f "$HOME/.local/share/applications/ohm.desktop"
   # Unhook before deleting: Hyprland auto-reloads on config changes, and
