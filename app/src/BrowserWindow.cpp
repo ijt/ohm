@@ -1,6 +1,8 @@
 #include "BrowserWindow.h"
 
 #include <QApplication>
+#include <QCloseEvent>
+#include <QDataStream>
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QPrintDialog>
@@ -42,13 +44,15 @@ bool isShintoShortcut(const QKeyEvent *ke, const QKeySequence &backShortcut) {
     return true;
   }
   // Ignore KeypadModifier so Ctrl+numpad +/- still match; Shift is only
-  // accepted for zoom-in (Ctrl+Shift+= is Key_Plus on most layouts) and
-  // the shortcuts overlay (Ctrl+? is Ctrl+Shift+/ on a US layout).
+  // accepted for zoom-in (Ctrl+Shift+= is Key_Plus on most layouts), the
+  // shortcuts overlay (Ctrl+? is Ctrl+Shift+/ on a US layout), and
+  // reopening a closed page (Ctrl+Shift+T).
   const Qt::KeyboardModifiers mods =
       ke->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
   if (mods == Qt::NoModifier && ke->key() == Qt::Key_F1) return true;
   if (mods == (Qt::ControlModifier | Qt::ShiftModifier)) {
     switch (ke->key()) {
+      case Qt::Key_T:
       case Qt::Key_Equal:
       case Qt::Key_Plus:
       case Qt::Key_Slash:
@@ -209,6 +213,7 @@ class WebView : public QWebEngineView {
 };
 
 QVector<BrowserWindow *> BrowserWindow::instances_;
+QVector<BrowserWindow::ClosedPage> BrowserWindow::closedPages_;
 Palette BrowserWindow::currentPalette_;
 
 BrowserWindow *BrowserWindow::spawn(QWebEngineProfile *profile, HistoryStore *history,
@@ -265,14 +270,7 @@ BrowserWindow *BrowserWindow::spawnForRequest(QWebEngineProfile *profile, Histor
     win->relayout();
   }
   // Connect before openIn() so a synchronous loadFinished can't slip past.
-  connect(
-      win->webView_->page(), &QWebEnginePage::loadFinished, win,
-      [win](bool) {
-        win->state_ = State::Loaded;
-        givePageFocus(win->webView_);
-        win->overlay_->hideOverlay();
-      },
-      Qt::SingleShotConnection);
+  win->revealOnFirstLoad();
   // openIn() must be called before this handler returns, or Qt rejects
   // the window-open request outright -- see spawnForRequest()'s own doc
   // comment for why this, not request.requestedUrl() + setUrl(), is what
@@ -449,6 +447,8 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
     connect(sc, &QShortcut::activated, this, slot);
   };
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_T), &BrowserWindow::onNewTabShortcut);
+  addShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T),
+              &BrowserWindow::onReopenClosedShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_N), &BrowserWindow::onNewPageShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), &BrowserWindow::onEditAddressShortcut);
   addShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), &BrowserWindow::onEditAddressShortcut);
@@ -499,6 +499,21 @@ BrowserWindow::BrowserWindow(QWebEngineProfile *profile, HistoryStore *history,
 BrowserWindow::~BrowserWindow() {
   delete printer_;
   instances_.removeOne(this);
+}
+
+void BrowserWindow::closeEvent(QCloseEvent *event) {
+  // Ctrl+W, Super+Q and the window's own close all land here. The empty
+  // gate's about:blank has nothing worth reopening.
+  constexpr int kMaxClosedPages = 25;
+  const QUrl url = webView_->url();
+  if (url.isValid() && !url.isEmpty() && url.scheme() != QLatin1String("about")) {
+    QByteArray state;
+    QDataStream out(&state, QIODevice::WriteOnly);
+    out << *webView_->history();
+    closedPages_.push_back({url, state});
+    if (closedPages_.size() > kMaxClosedPages) closedPages_.removeFirst();
+  }
+  QMainWindow::closeEvent(event);
 }
 
 void BrowserWindow::resizeEvent(QResizeEvent *event) {
@@ -581,14 +596,7 @@ void BrowserWindow::onOverlayNavigate(const QString &url, const QString &typedQu
   // if) this navigation actually succeeds -- see its comment for why this
   // isn't just recorded right here.
   pendingTypedQuery_ = typedQuery;
-  connect(
-      webView_->page(), &QWebEnginePage::loadFinished, this,
-      [this](bool) {
-        state_ = State::Loaded;
-        givePageFocus(webView_);
-        overlay_->hideOverlay();
-      },
-      Qt::SingleShotConnection);
+  revealOnFirstLoad();
   webView_->setUrl(QUrl(url));
 }
 
@@ -610,6 +618,38 @@ void BrowserWindow::onNewTabShortcut() {
   // isn't there, spawn still happens and the page just opens as a tile.
   ensureActiveWindowGrouped();
   BrowserWindow::spawn(webView_->page()->profile(), history_, domains_, downloads_, QString());
+}
+
+void BrowserWindow::onReopenClosedShortcut() {
+  if (closedPages_.isEmpty()) return;
+  const ClosedPage page = closedPages_.takeLast();
+  ensureActiveWindowGrouped();
+  // Same unmapped start as a popup (see spawnForRequest): no empty gate and
+  // no about:blank load, just the loading gate until the page paints.
+  BrowserWindow *win = spawnInternal(webView_->page()->profile(), history_, domains_, downloads_,
+                                      QString(), /*showEmptyGate=*/false, /*mapWindow=*/false);
+  win->overlay_->showLoading(page.url.toString());
+  win->relayout();
+  win->revealOnFirstLoad();
+  // Restoring the history also navigates to its current entry. Fall back
+  // to the bare URL if the saved history doesn't load.
+  QDataStream in(page.history);
+  in >> *win->webView_->history();
+  if (in.status() != QDataStream::Ok || win->webView_->history()->count() == 0) {
+    win->webView_->setUrl(page.url);
+  }
+  win->show();
+}
+
+void BrowserWindow::revealOnFirstLoad() {
+  connect(
+      webView_->page(), &QWebEnginePage::loadFinished, this,
+      [this](bool) {
+        state_ = State::Loaded;
+        givePageFocus(webView_);
+        overlay_->hideOverlay();
+      },
+      Qt::SingleShotConnection);
 }
 
 void BrowserWindow::onEditAddressShortcut() {

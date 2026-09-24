@@ -27,6 +27,7 @@ Item {
       title: "This window",
       rows: [
         { keys: "Ctrl+T", action: "New page in this Hyprland group" },
+        { keys: "Ctrl+Shift+T", action: "Reopen the last closed page" },
         { keys: "Ctrl+N", action: "New page as a standalone window" },
         { keys: "Ctrl+L / Ctrl+K", action: "Edit this window's address" },
         { keys: "Alt+Left", action: "Back (config.lua: back_shortcut)" },

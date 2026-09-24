@@ -9,7 +9,9 @@
 // section.
 #pragma once
 
+#include <QByteArray>
 #include <QMainWindow>
+#include <QUrl>
 #include <QVector>
 
 #include "Config.h"
@@ -71,6 +73,8 @@ class BrowserWindow : public QMainWindow {
 
  protected:
   void resizeEvent(QResizeEvent *event) override;
+  // Remembers the page (URL and back/forward history) for Ctrl+Shift+T.
+  void closeEvent(QCloseEvent *event) override;
 
  private:
   enum class State { Empty, Loaded, Gate };
@@ -107,6 +111,14 @@ class BrowserWindow : public QMainWindow {
   // Ctrl+T: same spawn as onNewPageShortcut, but first groups the current
   // window so Hyprland auto-joins the new one (groups are Shinto's tabs).
   void onNewTabShortcut();
+  // Ctrl+Shift+T: reopens the most recently closed page, with its
+  // back/forward history, as a new tab in this window's group (like
+  // Ctrl+T). Closed pages are kept per daemon process, so this works from
+  // any Shinto window, including one opened after the last one closed.
+  void onReopenClosedShortcut();
+  // Once the next load finishes, hides the loading gate and focuses the
+  // page. For windows that start loading without going through the gate.
+  void revealOnFirstLoad();
   void onEditAddressShortcut();
   void onBackShortcut();
   void onFindShortcut();
@@ -148,6 +160,13 @@ class BrowserWindow : public QMainWindow {
   QPrinter *printer_ = nullptr;
 
   static QVector<BrowserWindow *> instances_;
+  // Most recently closed last. Each entry is the page's URL and its
+  // QWebEngineHistory serialized with QDataStream.
+  struct ClosedPage {
+    QUrl url;
+    QByteArray history;
+  };
+  static QVector<ClosedPage> closedPages_;
   static Palette currentPalette_;
 };
 

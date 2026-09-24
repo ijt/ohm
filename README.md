@@ -143,6 +143,7 @@ Browser (inside a Shinto window):
 | Key | Action |
 |-----|--------|
 | `Ctrl + T` | New empty page in the current Hyprland group (creates the group if needed) |
+| `Ctrl + Shift + T` | Reopen the last closed page, with its back history, in the current group |
 | `Ctrl + N` | New empty page as a standalone window |
 | `Ctrl + L` / `Ctrl + K` | Edit this window's address (whole address selected, so typing replaces it). Escape goes back. |
 | `Alt + Left` | Back (configurable, see [Configuration](#configuration)) |
