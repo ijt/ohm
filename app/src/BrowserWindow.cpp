@@ -599,6 +599,24 @@ void BrowserWindow::runCommand(const QString &name) {
   (w->*it.value())();
 }
 
+void BrowserWindow::focusWindowShowing(const QUrl &origin) {
+  const auto sameOrigin = [&origin](const BrowserWindow *w) {
+    const QUrl url = w->webView_->url();
+    return url.scheme() == origin.scheme() && url.host() == origin.host() &&
+           url.port() == origin.port();
+  };
+  if (lastActive_ && sameOrigin(lastActive_)) {
+    lastActive_->focusViaCompositor();
+    return;
+  }
+  for (auto it = instances_.crbegin(); it != instances_.crend(); ++it) {
+    if (sameOrigin(*it)) {
+      (*it)->focusViaCompositor();
+      return;
+    }
+  }
+}
+
 void BrowserWindow::closeEvent(QCloseEvent *event) {
   // Ctrl+W, Super+Q and the window's own close all land here. The empty
   // gate's about:blank has nothing worth reopening.

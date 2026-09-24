@@ -75,6 +75,10 @@ class BrowserWindow : public QMainWindow {
   // ours. Unknown names and no-window cases are ignored.
   static void runCommand(const QString &name);
 
+  // Brings forward a window showing a page from `origin` (a clicked web
+  // notification), the most recently focused one if there are several.
+  static void focusWindowShowing(const QUrl &origin);
+
   // The last-broadcast palette, cached so a freshly-spawned window (or
   // DownloadsWindow, opened lazily and separately from this class) can
   // apply it immediately without waiting for the next broadcast.

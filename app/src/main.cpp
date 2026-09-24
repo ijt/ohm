@@ -26,6 +26,7 @@
 #include "SingletonServer.h"
 #include "ThemeLoader.h"
 #include "PasskeyBroker.h"
+#include "WebNotifications.h"
 #include "WebProfile.h"
 
 namespace {
@@ -244,6 +245,7 @@ int main(int argc, char *argv[]) {
     qWarning() << "shinto: continuing without persistent download history";
   }
   QWebEngineProfile *profile = shinto::createSharedProfile(&app, &downloads);
+  shinto::installNotificationPresenter(profile, &shinto::BrowserWindow::focusWindowShowing);
 
   shinto::HistoryStore history;
   if (!history.open()) {
