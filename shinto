@@ -389,7 +389,9 @@ do_uninstall() {
   rm -f "$HOME/.local/bin/shinto"
   uninstall_omarchy_panels
   rm -f "$HOME/.local/share/applications/shinto.desktop"
-  rm -f "$CONFIG_HOME/hypr/shinto.lua"
+  # Unhook before deleting: Hyprland auto-reloads on config changes, and
+  # deleting shinto.lua while hyprland.lua still requires it flashed a
+  # config-error banner until the require was gone.
   if [[ -f $CONFIG_HOME/hypr/hyprland.lua ]]; then
     python3 - <<'PY'
 from pathlib import Path
@@ -439,6 +441,7 @@ for line in lines:
 p.write_text("\n".join(out).rstrip() + "\n")
 PY
   fi
+  rm -f "$CONFIG_HOME/hypr/shinto.lua"
   scrub_shinto_mime
   if [[ $(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null) == shinto.desktop ]]; then
     restore_default
