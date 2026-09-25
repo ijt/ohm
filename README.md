@@ -107,11 +107,11 @@ cmake --build app/build
 
 ### Packaged (Arch / Omarchy)
 
-Download the latest `ohm-*-x86_64.pkg.tar.zst` from
-[Releases](https://github.com/ijt/ohm/releases) and:
+Download the latest `ohm-*-x86_64.pkg.tar.zst` (or `ohm-*-aarch64.pkg.tar.zst`
+on ARM) from [Releases](https://github.com/ijt/ohm/releases) and:
 
 ```bash
-sudo pacman -U ohm-*-x86_64.pkg.tar.zst
+sudo pacman -U ohm-*-$(uname -m).pkg.tar.zst
 systemctl --user enable --now ohm.service
 ```
 
