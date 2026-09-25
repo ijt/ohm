@@ -97,9 +97,9 @@ cmake --build app/build
 - enable `ohm.service` so the daemon is warm after login
 - rebind `Super + Shift + Return` to Ohm and `Super + Shift + Y` to YouTube in Ohm
 - tag Ohm windows like other Chromium-family browsers
-- ask (once, on first install) whether to make Ohm the default for links and `Super + Shift + B`
-
-You can also opt in later with `ohm default`.
+- leave your default browser alone: it never prompts. To make Ohm the
+  default for links, `Super + Shift + B` and web apps, run `ohm default`
+  (the install output ends with that hint).
 
 ```bash
 ./ohm uninstall   # data is left in ~/.local/share/ohm
@@ -238,4 +238,4 @@ It's real Lua, so either setting can be computed however you like (env vars via 
 
 - Dedicated QtWebEngine profile at `~/.local/share/ohm/profile/webengine` — your main Chromium logins are untouched.
 - `Ctrl+T` opens a new empty page in the same Hyprland group as this window (and makes a group if there isn't one yet). `Ctrl+N` opens a new empty window of its own. `Ctrl+L` edits the address in this window, whole address selected. Escape goes back. On the empty gate, Ctrl+L is a no-op.
-- `Super + Shift + B` stays Omarchy's default-browser launcher (`omarchy-launch-browser` / XDG) until you say yes at install time, or run `ohm default` / `omarchy default browser ohm`.
+- `Super + Shift + B` stays Omarchy's default-browser launcher (`omarchy-launch-browser` / XDG) until you run `ohm default` / `omarchy default browser ohm`.

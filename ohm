@@ -197,48 +197,17 @@ is_default_browser() {
   [[ $(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null) == ohm.desktop ]]
 }
 
-# Prompt on stdout; read from /dev/tty so this still works when stdin is a
-# pipe (`curl | bash` → install.sh → ./ohm install). `read -p` writes
-# the prompt to stderr, and we don't want a missing /dev/tty to dump a
-# bash error, so the read itself is allowed to fail.
-#
-# $1 = prompt, $2 = default if the reply is empty (y or n).
-# Returns 0 for yes, 1 for no / no tty.
-ask_tty() {
-  local prompt=$1
-  local default=${2:-n}
-  local reply
-  printf '%s' "$prompt"
-  if ! read -r reply 2>/dev/null </dev/tty; then
-    echo
-    return 1
-  fi
-  [[ -z $reply ]] && reply=$default
-  case "$reply" in
-    [yY]*) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
-# Ask on first install only -- re-running this to pick up an update
-# shouldn't nag someone who already said no. No controlling terminal
-# (CI, etc.) is treated as no.
-maybe_install_default() {
-  local first_install=$1
+# Never prompts: install stays non-interactive (and scriptable, and
+# recordable), so the default-browser switch is left to `ohm default`,
+# named last in the install output where it's easy to see.
+report_default() {
   if is_default_browser; then
-    echo "Ohm is already the default browser."
+    echo "Ohm is your default browser."
     route_webapps
-    return
-  fi
-  if [[ $first_install -eq 0 ]]; then
-    echo "Super+Shift+B / xdg-open stay on the XDG default. Run \`ohm default\` to change that."
-    return
-  fi
-  if ask_tty "May I make Ohm your default browser? (links and Super+Shift+B) [y/N] " n; then
-    install_default
-    echo "Thank you — Ohm is now the default browser."
   else
-    echo "No worries. Super+Shift+B and links stay as they are. You can run \`ohm default\` later."
+    echo
+    echo "To make Ohm your default browser (links, Super+Shift+B, web apps), run:"
+    echo "  ohm default"
   fi
 }
 
@@ -541,9 +510,6 @@ PY
 
 do_install() {
   require_bin
-  local first_install=1
-  # -L too: an old Shinto link may dangle now that its script is renamed.
-  [[ -e $HOME/.local/bin/ohm || -L $HOME/.local/bin/shinto ]] && first_install=0
   local was_old_default
   was_old_default=$(migrate_old_installs)
   install_path
@@ -554,15 +520,12 @@ do_install() {
   install_hypr
   install_systemd
   install_theme_hook
-  if ((was_old_default)); then
-    install_default
-    echo "Ohm is still your default browser."
-  fi
+  ((was_old_default)) && install_default
   echo "Ohm installed."
-  maybe_install_default "$first_install"
   echo "Super+Shift+Return opens Ohm."
   echo "Ctrl+? (or F1) lists keyboard shortcuts."
   echo "Hyprland groups (the tabs): Super+G, Super+Ctrl+Left/Right, Super+Alt+1-4."
+  report_default
 }
 
 do_uninstall() {
