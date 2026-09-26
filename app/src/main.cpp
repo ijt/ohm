@@ -10,8 +10,10 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QStringList>
 #include <QSurfaceFormat>
+#include <QUrl>
 #include <QWebEngineProfile>
 
 #include <cstdio>
@@ -33,6 +35,17 @@ namespace {
 
 QString openCommand(const QString &url) {
   return url.isEmpty() ? QStringLiteral("OPEN") : QStringLiteral("OPEN ") + url;
+}
+
+// `ohm index.html` names a file in the caller's cwd, not the host
+// "index.html". Resolve it here: the daemon runs in a different directory.
+QString resolveLocalPath(const QString &arg) {
+  if (arg.isEmpty()) return arg;
+  static const QRegularExpression kScheme(QStringLiteral("^[a-zA-Z][a-zA-Z0-9+.-]*:"));
+  if (kScheme.match(arg).hasMatch()) return arg;
+  const QFileInfo info(arg);
+  if (!info.exists()) return arg;
+  return QUrl::fromLocalFile(info.absoluteFilePath()).toString();
 }
 
 // Source-tree binary is <root>/app/build/ohm-bin and the wrapper is
@@ -217,7 +230,7 @@ int main(int argc, char *argv[]) {
   }
 
   const bool forceDaemon = args.removeOne(QStringLiteral("--daemon"));
-  const QString url = args.isEmpty() ? QString() : args.first();
+  const QString url = resolveLocalPath(args.isEmpty() ? QString() : args.first());
 
   if (!forceDaemon && ohm::isShellCommand(url)) {
     if (!forwardShellCommand(argv, url)) return 2;
